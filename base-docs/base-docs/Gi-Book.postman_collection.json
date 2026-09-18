@@ -1,0 +1,3799 @@
+{
+    "info": {
+        "_postman_id": "a6388d54-4f18-4555-a852-3ef25c76cd23",
+        "name": "Gi-Book",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "28414994"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Login",
+                    "item": [
+                        {
+                            "name": "Register",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "POST",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"name\": \"John Doe\",               /// required, string, max:255\r\n  \"email\": \"john@example.com\",      /// required, string, email, max:255, unique:users,email\r\n  \"password\": \"password123\",        /// required, string, min:8\r\n  \"mobile_number\": \"1234567890\",    /// required, string, max:20\r\n  \"country_code\": 91,               /// required, integer\r\n  \"user_type\": \"user\",              /// required, string, allowed: admin, admin_staff, white_label, white_label_staff, user, user_staff\r\n  \"parent_id\": null   /// optional, uuid, must be a valid users id\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/register",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "register"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Login",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "POST",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"email\": \"sagar@gmail.com\",      /// required, string, email\r\n  \"password\": \"Sagar@123\",       /// required, string, min:8\r\n  \"fcm_token\": \"device-fcm-token-here\",   /// optional, string, stores Firebase token on user\r\n  \"fcm_platform\": \"android\"   /// optional, string: android, ios, web\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/login",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "login"
+                                    ]
+                                },
+                                "description": "Login and optionally store FCM token on users.fcm_token for push notifications."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Change Password",
+                    "item": [
+                        {
+                            "name": "Set New Password",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "POST",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"identifier\": \"john@example.com\",                 /// required, string\r\n  \"otp\": \"654321\",                                  /// required, string\r\n  \"password\": \"newsecurepassword123\",               /// required, string, min:8, confirmed\r\n  \"password_confirmation\": \"newsecurepassword123\"   /// required, string, min:8\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/forgot-password/set-password",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "forgot-password",
+                                        "set-password"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Forgot Password",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "POST",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"identifier\": \"john@example.com\"  /// required, string\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/forgot-password",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "forgot-password"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Change Password",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "POST",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"current_password\": \"newsecurepassword123\",                /// required, string\r\n  \"password\": \"brandnewpassword456\",                /// required, string, min:8, confirmed\r\n  \"password_confirmation\": \"brandnewpassword456\"   /// required, string, min:8\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/change-password",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "change-password"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Profile",
+                    "item": [
+                        {
+                            "name": "Proflle",
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            },
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": []
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/profile",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "profile"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Update",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "PUT",
+                                "header": [],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"name\": \"John Doe Updated\",       /// required, string, max:255\r\n  \"mobile_number\": \"0987654321\",    /// required, string, max:20\r\n  \"country_code\": 91                /// required, integer\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/auth/profile",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "profile"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Account Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"password\": \"brandnewpassword456\"         /// required, string\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/account",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "account"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Business",
+            "item": [
+                {
+                    "name": "Show",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"all\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"created_at\",   /// optional, string, allowed: id, business_name, created_at, updated_at\r\n  \"sort_dir\": \"desc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\"   /// optional, string\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"business_name\": \"My Business\",   /// required, string, max:255\r\n  \"business_logo\": \"https://example.com/logo.png\",   /// optional, string, max:2048, nullable\r\n  \"business_type\": \"Agency\",   /// optional, string, max:255, nullable\r\n  \"address\": \"123 Business St\",   /// required, string, max:1000\r\n  \"gst_number\": \"GSTIN123456\",   /// optional, string, max:50, nullable\r\n  \"pan_number\": \"ABCDE1234F\",   /// optional, string, max:50, nullable\r\n  \"cin\": \"L12345MH2000PLC123456\",   /// optional, string, max:50, nullable\r\n  \"tin\": \"12345678901\",   /// optional, string, max:50, nullable\r\n  \"contact_email\": \"business@example.com\",   /// required, string, email, max:255\r\n  \"contact_phone\": 1234567890,   /// required, integer, max:20\r\n  \"country_code\": 91   /// required, integer\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Select",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business/select/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business",
+                                "select",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f5cb9-872e-70f1-ac3c-d9d3e1c55f91"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"business_name\": \"My Business Updated\",   /// optional, string, max:255\r\n  \"business_logo\": \"https://example.com/logo.png\",   /// optional, string, max:2048, nullable\r\n  \"business_type\": \"Agency\",   /// optional, string, max:255, nullable\r\n  \"address\": \"456 New Business Ave\",   /// optional, string, max:1000\r\n  \"gst_number\": \"GSTIN123456\",   /// optional, string, max:50, nullable\r\n  \"pan_number\": \"ABCDE1234F\",   /// optional, string, max:50, nullable\r\n  \"cin\": \"L12345MH2000PLC123456\",   /// optional, string, max:50, nullable\r\n  \"tin\": \"12345678901\",   /// optional, string, max:50, nullable\r\n  \"contact_email\": \"business_new@example.com\",   /// optional, string, email, max:255\r\n  \"contact_phone\": \"0987654321\",   /// optional, string, max:20\r\n  \"country_code\": 91   /// optional, integer\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f5c83-f05e-7279-a482-c076704bde2a"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f5c83-f05e-7279-a482-c076704bde2a"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"password\": \"password123\"   /// required, string\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/business/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "business",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f5c83-f05e-7279-a482-c076704bde2a"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Settings",
+            "item": [
+                {
+                    "name": "Show",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "settings"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"currency\": \"INR\",   /// optional, string, max:10\r\n  \"timezone\": \"Asia/Kolkata\",   /// optional, string, max:255, must be a valid timezone\r\n  \"language\": \"en\",   /// optional, string, max:10\r\n  \"thermal_printer_size\": \"2_inch\",   /// optional, string, allowed: 2_inch, 3_inch\r\n  \"invoice_prefix\": \"GI-INV\",   /// optional, string, max:50\r\n  \"invoice_theme_color\": \"#fffaed\",   /// optional, string, max:20\r\n  \"show_gst_column\": false   /// optional, boolean\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "settings"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Ledgers",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"name\",   /// optional, string, allowed: id, name, type, current_balance, created_at, updated_at\r\n  \"sort_dir\": \"asc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"type\": \"customer\"   /// optional, string, allowed: customer, supplier, bank, cash, expense\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Rajesh Traders\",   /// required, string, max:255\r\n  \"type\": \"customer\",   /// required, string, allowed: customer, supplier, bank, cash, expense\r\n  \"opening_balance\": 5000.00,   /// required, numeric, min:0\r\n  \"opening_balance_type\": \"debit\",   /// required, string, allowed: credit, debit\r\n  \"gst_number\": \"27AADCB2230M1ZP\",   /// optional, string, max:50\r\n  \"billing_address\": {   /// optional, array\r\n    \"street\": \"12, MG Road\",   /// optional, string, max:500\r\n    \"city\": \"Ahmedabad\",   /// optional, string, max:255\r\n    \"state\": \"Gujarat\",   /// optional, string, max:255\r\n    \"pin\": \"380001\"   /// optional, string, max:20\r\n  },\r\n  \"shipping_address\": {   /// optional, array\r\n    \"street\": \"Plot 5, GIDC Industrial Estate\",   /// optional, string, max:500\r\n    \"city\": \"Vadodara\",   /// optional, string, max:255\r\n    \"state\": \"Gujarat\",   /// optional, string, max:255\r\n    \"pin\": \"390020\"   /// optional, string, max:20\r\n  },\r\n  \"contact_number\": \"9876543210\",   /// optional, string, max:20\r\n  \"country_code\": 91   /// optional, integer\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f66f4-6804-712d-9602-32901ba9cc30"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Rajesh Traders Pvt Ltd\",   /// optional, string, max:255\r\n  \"type\": \"customer\",   /// optional, string, allowed: customer, supplier, bank, cash, expense\r\n  \"opening_balance\": 6000.00,   /// optional, numeric, min:0\r\n  \"opening_balance_type\": \"debit\",   /// optional, string, allowed: credit, debit\r\n  \"gst_number\": \"27AADCB2230M1ZP\",   /// optional, string, max:50\r\n  \"billing_address\": {   /// optional, array\r\n    \"street\": \"12, MG Road, Navrangpura\",   /// optional, string, max:500\r\n    \"city\": \"Ahmedabad\",   /// optional, string, max:255\r\n    \"state\": \"Gujarat\",   /// optional, string, max:255\r\n    \"pin\": \"380009\"   /// optional, string, max:20\r\n  },\r\n  \"shipping_address\": {   /// optional, array\r\n    \"street\": \"Plot 5, GIDC Industrial Estate\",   /// optional, string, max:500\r\n    \"city\": \"Vadodara\",   /// optional, string, max:255\r\n    \"state\": \"Gujarat\",   /// optional, string, max:255\r\n    \"pin\": \"390020\"   /// optional, string, max:20\r\n  },\r\n  \"contact_number\": \"9876543210\",   /// optional, string, max:20\r\n  \"country_code\": 91   /// optional, integer\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f66f4-6804-712d-9602-32901ba9cc30"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f66f4-6804-712d-9602-32901ba9cc30"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Transactions",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n    \"page\": 1,            /// optional, numeric, min:1\r\n    \"per_page\": \"10\",     /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n    \"sort_by\": \"transaction_date\",   /// optional, string, allowed: id, transaction_number, amount, type, transaction_date, created_at, updated_at\r\n    \"sort_dir\": \"desc\",   /// optional, string, allowed: asc, desc\r\n    \"search\": \"\",         /// optional, string\r\n    \"type\": \"payment_in\"  /// optional, string, allowed: payment_in, payment_out, contra, journal\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/ledgers/:id/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "ledgers",
+                                ":id",
+                                "transactions"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f66f4-6804-712d-9602-32901ba9cc30"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Items",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"item_name\",   /// optional, string, allowed: id, item_name, item_type, sales_price, current_stock, created_at, updated_at\r\n  \"sort_dir\": \"asc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"item_type\": \"product\"   /// optional, string, allowed: product, service\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"item_name\": \"Premium Widget\",   /// required, string, max:255\r\n  \"item_code\": \"WGT-001\",   /// optional, string, max:255\r\n  \"hsn_sac_code\": \"8471\",   /// optional, string, max:255\r\n  \"item_type\": \"product\",   /// required, string, allowed: product, service\r\n  \"unit\": \"PCS\",   /// required, string, max:50\r\n  \"sales_price\": 130.00,   /// required, numeric, min:0\r\n  \"sales_price_tax_type\": \"without_tax\",   /// required, string, allowed: with_tax, without_tax\r\n  \"purchase_price\": 100.00,   /// required, numeric, min:0\r\n  \"purchase_price_tax_type\": \"with_tax\",   /// required, string, allowed: with_tax, without_tax\r\n    \"tax_rate\": 18.00,                          /// required, numeric, min:0, max:100\r\n  \"description\": \"High quality widget\",   /// optional, string, max:1000\r\n  \"current_stock\": 12.00   /// required, numeric, min:0\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"item_name\": \"Premium Widget Updated\",   /// optional, string, max:255\r\n  \"item_code\": \"WGT-001-REV\",   /// optional, string, max:255\r\n  \"hsn_sac_code\": \"8471\",   /// optional, string, max:255\r\n  \"item_type\": \"product\",   /// optional, string, allowed: product, service\r\n  \"unit\": \"PCS\",   /// optional, string, max:50\r\n  \"sales_price\": 140.00,   /// optional, numeric, min:0\r\n  \"sales_price_tax_type\": \"without_tax\",   /// optional, string, allowed: with_tax, without_tax\r\n  \"purchase_price\": 110.00,   /// optional, numeric, min:0\r\n  \"purchase_price_tax_type\": \"with_tax\",   /// optional, string, allowed: with_tax, without_tax\r\n    \"tax_rate\": 18.00,                          /// required, numeric, min:0, max:100\r\n      \"description\": \"Updated high quality widget\"   /// optional, string, max:1000\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Adjust Stock",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"adjustment_type\": \"add\",   /// required, string, allowed: add, reduce\r\n  \"quantity\": 500.00,   /// required, numeric, gt:0\r\n  \"reason\": \"Stock correction count\",   /// optional, string, max:500\r\n  \"adjustment_date\": \"2025-10-10\"   /// required, date, format: Y-m-d\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/:id/adjust-stock",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                ":id",
+                                "adjust-stock"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f70b8-ac6a-7008-99f0-0d2f81c5d940"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Stock Adjustments",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"adjustment_date\",   /// optional, string, allowed: id, adjustment_type, quantity, adjustment_date, created_at, updated_at\r\n  \"sort_dir\": \"desc\"   /// optional, string, allowed: asc, desc\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/items/:id/stock-adjustments",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "items",
+                                ":id",
+                                "stock-adjustments"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Sales Invoices",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"created_at\",   /// optional, string, allowed: id, invoice_number, amount, status, due_date, created_at, updated_at\r\n  \"sort_dir\": \"desc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"status\": \"unpaid\",   /// optional, string, allowed: paid, unpaid, partially_paid\r\n  \"ledger_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",   /// optional, uuid\r\n  \"start_date\": \"2023-10-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2023-11-01\"   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"ledger_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",   /// required, uuid, must exist in ledgers scoped to selected business\r\n  \"invoice_number\": \"INV-001\",   /// required, string, max:255\r\n  \"amount\": 1200.50,   /// required, numeric, min:0\r\n  \"discount_percentage\": 10.00,   /// optional, numeric, min:0, max:100, nullable\r\n  \"discount_amount\": 120.05,   /// optional, numeric, min:0, nullable\r\n  \"additional_charges\": 50.00,   /// optional, numeric, min:0, nullable\r\n  \"round_off_amount\": -0.45,   /// optional, numeric, nullable\r\n  \"note\": \"Thank you for your business\",   /// optional, string, max:1000, nullable\r\n  \"status\": \"unpaid\",   /// required, string, allowed: paid, unpaid, partially_paid\r\n  \"due_date\": \"2023-11-01\",   /// required, date, format: Y-m-d\r\n  \"items\": [   /// required, array, min:1\r\n    {\r\n      \"item_id\": \"b2c3d4e5-f6a7-8901-bcde-f12345678901\",   /// required, uuid, must exist in items scoped to selected business\r\n      \"quantity\": 2,   /// required, numeric, min:0.01\r\n      \"rate\": 600.25,   /// required, numeric, min:0\r\n      \"amount\": 1200.50   /// required, numeric, min:0\r\n    }\r\n  ]\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"ledger_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",   /// optional, uuid, must exist in ledgers scoped to selected business\r\n  \"invoice_number\": \"INV-001-REV\",   /// optional, string, max:255\r\n  \"amount\": 1400.00,   /// optional, numeric, min:0\r\n  \"discount_percentage\": 5.00,   /// optional, numeric, min:0, max:100, nullable\r\n  \"discount_amount\": 70.00,   /// optional, numeric, min:0, nullable\r\n  \"additional_charges\": 100.00,   /// optional, numeric, min:0, nullable\r\n  \"round_off_amount\": 0.00,   /// optional, numeric, nullable\r\n  \"note\": \"Updated invoice items and billing info.\",   /// optional, string, max:1000, nullable\r\n  \"status\": \"partially_paid\",   /// optional, string, allowed: paid, unpaid, partially_paid\r\n  \"due_date\": \"2023-11-15\",   /// optional, date, format: Y-m-d\r\n  \"items\": [   /// optional, array, min:1 (replaces all existing items when provided)\r\n    {\r\n      \"item_id\": \"b2c3d4e5-f6a7-8901-bcde-f12345678901\",   /// required, uuid, must exist in items scoped to selected business\r\n      \"quantity\": 2,   /// required, numeric, min:0.01\r\n      \"rate\": 700.00,   /// required, numeric, min:0\r\n      \"amount\": 1400.00   /// required, numeric, min:0\r\n    }\r\n  ]\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Status",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PATCH",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"status\": \"paid\"   /// required, string, allowed: paid, unpaid, partially_paid\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id",
+                                "status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Receive Payment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"payment_id\": null,   /// optional, uuid \u2014 include existing payment id to update; omit or null to create\r\n  \"payment_ledger_id\": \"9f3a1b2c-4d5e-6f7a-8b9c-0d1e2f3a4b5c\",   /// required, uuid, bank or cash ledger in selected business\r\n  \"amount\": 500.00,   /// required, numeric, min:0.01\r\n  \"transaction_date\": \"2026-08-09\",   /// required, date, format: Y-m-d\r\n  \"transaction_number\": \"RCPT-001\",   /// optional, string, max:255, unique\r\n  \"remark\": \"Partial payment for INV-001\",   /// optional, string, max:1000, nullable\r\n  \"proof_image\": null   /// optional, string, max:2048, nullable\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id/receive-payment",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id",
+                                "receive-payment"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Payment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id/payments/:paymentId",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id",
+                                "payments",
+                                ":paymentId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                },
+                                {
+                                    "key": "paymentId",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Download PDF",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id/pdf",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id",
+                                "pdf"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "HTML Bill (WebView)",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/invoices/:id/view",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "invoices",
+                                ":id",
+                                "view"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Projects",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"name\",   /// optional, string, allowed: id, name, status, created_at, updated_at\r\n  \"sort_dir\": \"asc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"status\": \"ongoing\"   /// optional, string, allowed: ongoing, completed, on_hold\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "projects"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Greenfield Township\",   /// required, string, max:255\r\n  \"description\": \"200-unit residential township project in Ahmedabad\",   /// optional, string\r\n  \"status\": \"ongoing\"   /// required, string, allowed: ongoing, completed, on_hold\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "projects",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "projects",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739c-36d4-71e1-8f03-f1420885afe8"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Greenfield Township Phase 2\",   /// optional, string, max:255\r\n  \"description\": \"Expanded to 350-unit residential township\",   /// optional, string\r\n  \"status\": \"completed\"   /// optional, string, allowed: ongoing, completed, on_hold\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "projects",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739c-36d4-71e1-8f03-f1420885afe8"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "projects",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739c-36d4-71e1-8f03-f1420885afe8"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Sites",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"name\",   /// optional, string, allowed: id, name, status, created_at, updated_at\r\n  \"sort_dir\": \"asc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"project_id\": \"019f739d-e39a-725f-a900-c2ccb0f5a8eb\",   /// optional, uuid, must be a valid projects id belonging to the business\r\n  \"status\": \"active\"   /// optional, string, allowed: active, inactive\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sites",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sites"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"project_id\": \"019f739d-e39a-725f-a900-c2ccb0f5a8eb\",   /// required, uuid, must be a valid projects id belonging to the business\r\n  \"name\": \"Block A - Foundation\",   /// required, string, max:255\r\n  \"location\": \"Sector 12, SG Highway, Ahmedabad\",   /// optional, string, max:500\r\n  \"status\": \"active\"   /// required, string, allowed: active, inactive\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sites/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sites",
+                                "store"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Details",
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    },
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sites/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sites",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739f-2585-73e4-9a9a-e9ca8b4564df"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"project_id\": \"019f739d-e39a-725f-a900-c2ccb0f5a8eb\",   /// optional, uuid, must be a valid projects id belonging to the business\r\n  \"name\": \"Block A - Superstructure\",   /// optional, string, max:255\r\n  \"location\": \"Sector 12, SG Highway, Ahmedabad\",   /// optional, string, max:500\r\n  \"status\": \"inactive\"   /// optional, string, allowed: active, inactive\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sites/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sites",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739f-2585-73e4-9a9a-e9ca8b4564df"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "DELETE",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/sites/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "sites",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f739f-2585-73e4-9a9a-e9ca8b4564df"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Transactions",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"type\": \"project\",   /// required, string, allowed: ledger, project, site\r\n  \"id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",   /// required, uuid, must be a valid id of the specified type belonging to the business\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"transaction_date\",   /// optional, string, allowed: id, transaction_number, amount, type, transaction_date, created_at, updated_at\r\n  \"sort_dir\": \"desc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",   /// optional, string\r\n  \"transaction_type\": \"payment_in\"   /// optional, string, allowed: payment_in, payment_out, contra, journal\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Reports",
+            "item": [
+                {
+                    "name": "Sales Overview",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"top_limit\": 10   /// optional, integer, min:1, max:50, default: 10\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/sales-overview",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "sales-overview"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Purchase Expense",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"type\": \"all\"   /// optional, string, allowed: all, purchase, expense, default: all\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/purchase-expense",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "purchase-expense"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Invoice Summary",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\"   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/invoice-summary",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "invoice-summary"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Payment Activity",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"type\": \"all\",   /// optional, string, allowed: all, payment_in, payment_out, default: all\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"transaction_date\",   /// optional, string, allowed: transaction_date, amount, created_at\r\n  \"sort_dir\": \"desc\"   /// optional, string, allowed: asc, desc\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/payment-activity",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "payment-activity"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Ledger Statement",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"ledger_id\": \"87b0a8ee-9bb3-41c3-8f06-25f0ad9c362c\",   /// required, uuid, must exist in own business\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\"   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/ledger-statement",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "ledger-statement"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Profit Loss",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\"   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/profit-loss",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "profit-loss"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Inventory Status",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"low_stock_threshold\": 10,   /// optional, numeric, min:0, default: 10\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"search\": \"\",   /// optional, string\r\n  \"sort_by\": \"current_stock\",   /// optional, string, allowed: item_name, current_stock, sales_price, created_at\r\n  \"sort_dir\": \"asc\"   /// optional, string, allowed: asc, desc\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/inventory-status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "inventory-status"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Stock Movement",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"item_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",   /// optional, uuid, must exist in own business\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\"   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/stock-movement",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "stock-movement"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Customer Insights",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"start_date\": \"2026-08-01\",   /// optional, date, format: Y-m-d\r\n  \"end_date\": \"2026-08-31\",   /// optional, date, format: Y-m-d, after_or_equal: start_date\r\n  \"top_limit\": 10,   /// optional, integer, min:1, max:50, default: 10\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\"   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/reports/customer-insights",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "customer-insights"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "HTML WebView",
+                    "item": [
+                        {
+                            "name": "Sales Overview View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/sales-overview/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "sales-overview",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Purchase Expense View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/purchase-expense/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "purchase-expense",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Invoice Summary View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/invoice-summary/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "invoice-summary",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Payment Activity View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/payment-activity/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "payment-activity",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Ledger Statement View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/ledger-statement/view?ledger_id=&start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "ledger-statement",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "ledger_id",
+                                            "value": ""
+                                        },
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Profit Loss View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/profit-loss/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "profit-loss",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Inventory Status View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/inventory-status/view",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "inventory-status",
+                                        "view"
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Stock Movement View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/stock-movement/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "stock-movement",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Customer Insights View",
+                            "request": {
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/reports/customer-insights/view?start_date=2026-08-01&end_date=2026-08-31",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "reports",
+                                        "customer-insights",
+                                        "view"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start_date",
+                                            "value": "2026-08-01"
+                                        },
+                                        {
+                                            "key": "end_date",
+                                            "value": "2026-08-31"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Subscription",
+            "item": [
+                {
+                    "name": "Plans",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/subscription/plans",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "subscription",
+                                "plans"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Activate",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/subscription/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "subscription",
+                                "store"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"plan_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\"   /// required, uuid, visible plan for this user (price computed from admin base + WL margin)\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/subscription",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "subscription"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,   /// optional, numeric, min:1\r\n  \"per_page\": \"10\",   /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"created_at\",   /// optional, string\r\n  \"sort_dir\": \"desc\",   /// optional, string, allowed: asc, desc\r\n  \"search\": \"\"   /// optional, string\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Usage",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/subscription/usage",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "subscription",
+                                "usage"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Addon",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/subscription/addon",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "subscription",
+                                "addon"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"feature_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",   /// manual addon disabled (403)\r\n  \"units\": 1   /// required, integer\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Payment",
+                    "item": [
+                        {
+                            "name": "Status",
+                            "request": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/payment/status",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "payment",
+                                        "status"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            }
+                        },
+                        {
+                            "name": "Subscription Checkout",
+                            "request": {
+                                "method": "POST",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/payment/subscription/checkout",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "payment",
+                                        "subscription",
+                                        "checkout"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"plan_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\"   /// TESTING ONLY: required, uuid; skips payment gateway; credits admin base + WL margin\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Addon Checkout",
+                            "request": {
+                                "method": "POST",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{base_url}}/payment/addon/checkout",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "payment",
+                                        "addon",
+                                        "checkout"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\r\n  \"feature_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",   /// TESTING ONLY: required, uuid, feature in the active plan\r\n  \"units\": 1   /// required, integer, min:1\r\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Staff",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/staff",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "staff"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"page\": 1,                        /// optional, numeric, min:1\r\n  \"per_page\": \"10\",                 /// optional, string, allowed: 5, 10, 30, 50, 100, all\r\n  \"sort_by\": \"created_at\",          /// optional, string, allowed: id, name, email, status, created_at, updated_at\r\n  \"sort_dir\": \"desc\",               /// optional, string, allowed: asc, desc\r\n  \"search\": \"\",                     /// optional, string\r\n  \"status\": \"active\"                /// optional, string, allowed: active, inactive\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Store",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/staff/store",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "staff",
+                                "store"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Jane Staff\",             /// required, string, max:255\r\n  \"email\": \"jane@example.com\",        /// required, email, max:255, unique:users,email\r\n  \"password\": \"password123\",          /// required, string, min:8\r\n  \"mobile_number\": \"9876543210\",      /// optional, string, max:20\r\n  \"country_code\": 91,                 /// optional, integer\r\n  \"permission_ids\": [15, 16, 19]     /// optional, integer[], user-scope permission ids (sync)\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/staff/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "staff",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"name\": \"Jane Staff Updated\",     /// optional, string, max:255\r\n  \"email\": \"jane_new@example.com\",    /// optional, email, max:255, unique (ignores current staff)\r\n  \"password\": \"newpassword123\",       /// optional, string, min:8\r\n  \"mobile_number\": \"9876543210\",      /// optional, string, max:20\r\n  \"country_code\": 91,                 /// optional, integer\r\n  \"status\": \"active\",               /// optional, string, allowed: active, inactive\r\n  \"permission_ids\": [15, 25]         /// optional, integer[], replaces assigned permissions when sent\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Sync Permissions",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/staff/:id/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "staff",
+                                ":id",
+                                "permissions"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"permission_ids\": [15, 16, 19]     /// required, integer[], user-scope permission ids (empty array clears all)\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/staff/:id",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "staff",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "019f671c-0947-735c-842a-85d884bc0f2e"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Permission Catalog",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/permissions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "permissions"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notifications",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/notifications?page=1&per_page=15",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "optional, numeric, min:1"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "optional, string, allowed: 5, 10, 15, 30, 50, 100, all"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Lists notifications with metadata (action + entity IDs for frontend navigation). Marks all as read. Unread count on GET /splash as notifications_count."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Test Push",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/test-push",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "test-push"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"fcm_token\": \"device-fcm-token-here\",   /// optional; omit to use token saved on login\r\n  \"title\": \"Gi Book test\",   /// optional\r\n  \"description\": \"Firebase push is working.\",   /// optional; message is also accepted\r\n  \"image_url\": \"https://example.com/images/push-banner.png\",   /// optional\r\n  \"data\": {   /// optional FCM data payload (all values sent as strings)\r\n    \"action\": \"subscription.expiring\",\r\n    \"subscription_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",\r\n    \"screen\": \"subscription_detail\"\r\n  },\r\n  \"metadata\": {   /// optional alias for data; merged with data (data wins on conflict)\r\n    \"source\": \"postman_test\"\r\n  }\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Send test Firebase push with title, description, image_url, and data/metadata. Requires notification.update. No business/subscription required. If fcm_token is omitted, uses the authenticated user fcm_token from login/register."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Preferences \u2014 List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/notification-preferences",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notification-preferences"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Returns push_enabled, staff_*, stock_alerts, subscription_marketing, large_payment preferences."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Preferences \u2014 Update",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/notification-preferences",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notification-preferences"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\r\n  \"business_id\": \"019f671c-0947-735c-842a-85d884bc0f2e\",   /// optional, uuid\r\n  \"preferences\": {\r\n    \"push_enabled\": { \"is_enabled\": true },\r\n    \"staff_invoice\": { \"is_enabled\": true },\r\n    \"staff_stock\": { \"is_enabled\": true },\r\n    \"stock_alerts\": { \"is_enabled\": true },\r\n    \"subscription_marketing\": { \"is_enabled\": false },\r\n    \"large_payment\": { \"is_enabled\": true, \"config\": { \"min_amount\": 50000 } }\r\n  }\r\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Update notification preferences. Keys: push_enabled, staff_invoice, staff_stock, staff_transaction, staff_ledger, staff_delete, stock_alerts, large_payment."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "App Info",
+            "item": [
+                {
+                    "name": "List",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/app-info",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "app-info"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "About Us",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/app-info/about_us",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "app-info",
+                                "about_us"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Terms of Service",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/app-info/terms_of_service",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "app-info",
+                                "terms_of_service"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "Privacy Policy",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/app-info/privacy_policy",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "app-info",
+                                "privacy_policy"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "App Version",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/app-info/app_version",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "app-info",
+                                "app_version"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Splash",
+            "item": [
+                {
+                    "name": "Splash",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/splash",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "splash"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    "pm.request.headers.add({key: 'Accept', value: 'application/json' });"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "packages": [],
+                "requests": [],
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": ""
+        },
+        {
+            "key": "token",
+            "value": ""
+        },
+        {
+            "key": "local_domain",
+            "value": ""
+        },
+        {
+            "key": "live_domain",
+            "value": ""
+        }
+    ]
+}
