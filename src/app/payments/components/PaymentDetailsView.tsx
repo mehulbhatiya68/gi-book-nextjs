@@ -13,6 +13,10 @@ import {
   IoImageOutline,
   IoDocumentTextOutline,
   IoWalletOutline,
+  IoReceiptOutline,
+  IoCalendarOutline,
+  IoCardOutline,
+  IoChevronForward,
 } from "react-icons/io5";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
@@ -248,7 +252,7 @@ export default function PaymentDetailsView({
   if (isLoading && !payment) {
     return (
       <PermissionGuard module="Payment">
-        <div className="p-4 sm:p-6 max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto">
+        <div className="space-y-5 select-none gi-page pb-12">
           <SkeletonDetails />
         </div>
       </PermissionGuard>
@@ -258,7 +262,7 @@ export default function PaymentDetailsView({
   if (!payment) {
     return (
       <PermissionGuard module="Payment">
-        <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 select-none gi-page text-center max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto px-4">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 select-none gi-page text-center px-4 pb-12">
           <div className="h-16 w-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl">
             <IoWalletOutline />
           </div>
@@ -270,7 +274,7 @@ export default function PaymentDetailsView({
           </div>
           <button
             type="button"
-            onClick={() => handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, "/payments/history")}
+            onClick={() => handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, null, "/paymentHistory")}
             className="gi-back-btn"
           >
             <IoChevronBack />
@@ -283,143 +287,232 @@ export default function PaymentDetailsView({
 
   const amt = Number(payment?.amount || 0);
 
-  // Badge & Color Theme rules matching screenshots
+  // Badge & Color Theme rules
   let badgeText = "PAYMENT OUT";
-  let badgeClass = "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300";
+  let badgeClass = "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50";
   let amountClass = "text-rose-600 dark:text-rose-400";
   let amountSign = "-";
 
   if (isJournal) {
     badgeText = "JOURNAL";
-    badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300";
+    badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-900/50";
     amountClass = "text-purple-700 dark:text-purple-300";
     amountSign = "+";
   } else if (isCredit) {
     badgeText = "PAYMENT IN";
-    badgeClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300";
+    badgeClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50";
     amountClass = "text-emerald-600 dark:text-emerald-400";
     amountSign = "+";
   }
 
   return (
     <PermissionGuard module="Payment">
-      <div className="w-full max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-6 select-none gi-page">
+      <div className="space-y-5 select-none gi-page pb-12">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, "/payments/history")}
-            className="gi-back-btn"
-            aria-label="Back"
-          >
-            <IoChevronBack />
-            <span className="gi-back-label">Back</span>
-          </button>
-
-          {hasPermission("Payment", "Edit") && (
+        <div className="flex flex sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b gi-divider">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (payment?.id) router.push(`/payment/receivedPayment?id=${payment.id}&type=${isCredit ? "credit" : "debit"}`);
-              }}
-              className="px-3 py-1.5 rounded-full text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-              title="Edit Transaction"
+              onClick={() => handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, null, "/paymentHistory")}
+              className="gi-back-btn shrink-0"
+              aria-label="Back"
             >
-              <IoPencilOutline className="text-lg sm:text-xl" />
-              <span className="hidden sm:inline">Edit Transaction</span>
+              <IoChevronBack />
+              <span className="gi-back-label">Back</span>
             </button>
-          )}
-        </div>
 
-        {/* Main Details Card (Optimized for Mobile & Desktop) */}
-        <div className="p-4 sm:p-6 md:p-8 rounded-2xl border gi-border gi-card shadow-xs space-y-4 sm:space-y-6">
-          {/* Top row: Transaction Number & Type Badge */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-xs sm:text-sm font-bold gi-text-primary uppercase tracking-tight">
-              {pNumber}
-            </span>
-            <span className={`text-[10px] sm:text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider ${badgeClass}`}>
-              {badgeText}
-            </span>
-          </div>
+            <div>
+              <div className="flex flex-row items-center gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-bold gi-text-primary tracking-tight">
+                  {isJournal ? "Journal Voucher" : isCredit ? "Payment Received" : "Payment Out"}
+                </h1>
 
-          {/* Middle row: From Ledger -> Arrow -> To Ledger */}
-          <div className="flex items-center justify-between gap-3 sm:gap-6 pt-1">
-            <div className="min-w-0">
-              <p className="font-bold text-sm sm:text-base md:text-lg gi-text-primary truncate">{fromLedgerName}</p>
-              <p className="text-[10px] sm:text-xs gi-text-muted uppercase tracking-wider font-semibold mt-0.5">{fromLedgerType}</p>
-            </div>
-
-            <span className="gi-text-muted font-bold text-base sm:text-xl shrink-0 px-1 sm:px-3">
-              <IoArrowForward />
-            </span>
-
-            <div className="min-w-0 text-right">
-              <p className="font-bold text-sm sm:text-base md:text-lg gi-text-primary truncate">{toLedgerName}</p>
-              <p className="text-[10px] sm:text-xs gi-text-muted uppercase tracking-wider font-semibold mt-0.5">{toLedgerType}</p>
+              </div>
+              <p className="text-xs gi-text-muted mt-0.5 font-mono">
+                Ref #{pNumber}
+              </p>
             </div>
           </div>
 
-          {/* Dashed Divider */}
-          <div className="border-b border-dashed gi-divider my-2 sm:my-3" />
-
-          {/* Bottom row: Date & Formatted Amount */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs sm:text-sm gi-text-muted font-medium">{pDate}</span>
-            <span className={`font-mono font-bold text-base sm:text-xl md:text-2xl ${amountClass}`}>
-              {amountSign} ₹{amt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
-
-        {/* Details Below Card */}
-        <div className="space-y-4 sm:space-y-5 px-1">
-          {/* Linked Invoice Info */}
-          {linkedInvoiceNumber && (
-            <div className="space-y-1">
-              <p className="text-xs sm:text-sm font-semibold gi-text-secondary capitalize">{linkedInvoiceLabel}</p>
-              {matchingInvoice?.id ? (
-                <Link
-                  href={`/invoiceDetails/${matchingInvoice.id}`}
-                  className="text-xs sm:text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1.5"
-                >
-                  <span>{linkedInvoiceNumber}</span>
-                  <IoDocumentTextOutline className="text-xs sm:text-sm" />
-                </Link>
-              ) : (
-                <p className="text-xs sm:text-sm font-mono font-medium gi-text-primary">{linkedInvoiceNumber}</p>
-              )}
-            </div>
-          )}
-
-          {/* Remark Info */}
-          <div className="space-y-1">
-            <p className="text-xs sm:text-sm font-semibold gi-text-secondary">Remark</p>
-            <p className="text-xs sm:text-sm gi-text-primary leading-relaxed whitespace-pre-wrap">
-              {pRemarks || "No remark provided"}
-            </p>
-          </div>
-
-          {/* Photo Proof Attachment (if present) */}
-          {pProofImage && (
-            <div className="space-y-2 pt-2">
-              <p className="text-xs sm:text-sm font-semibold gi-text-secondary">Photo Proof</p>
-              <div
-                onClick={() => setShowPhotoModal(true)}
-                className="relative rounded-xl overflow-hidden border gi-border bg-slate-100 dark:bg-zinc-800 max-w-xs sm:max-w-sm cursor-pointer group aspect-4/3"
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {hasPermission("Payment", "Edit") && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (payment?.id) router.push(`/payment/receivedPayment?id=${payment.id}&type=${isCredit ? "credit" : "debit"}`);
+                }}
+                className="px-3.5 py-2 rounded-xl gi-surface-interactive border gi-border gi-text-primary hover:bg-[var(--gi-hover)] transition cursor-pointer flex items-center gap-2 text-xs font-bold shadow-2xs"
+                title="Edit Transaction"
               >
-                <img
-                  src={pProofImage}
-                  alt="Proof Attachment"
-                  className="w-full h-full object-cover group-hover:scale-105 transition"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs sm:text-sm font-semibold gap-1.5">
-                  <IoImageOutline className="text-base sm:text-lg" />
-                  <span>View Proof</span>
+                <IoPencilOutline className="text-base text-indigo-500" />
+                <span>Edit Transaction</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Main Responsive Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left / Main Section (7 cols on Desktop) */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Main Transaction Summary Banner Card */}
+            <div className="p-5 sm:p-6 md:p-8 rounded-2xl border gi-border gi-card shadow-xs space-y-6 relative overflow-hidden">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-bold gi-text-muted uppercase tracking-wider">Amount Transferred</span>
+                <span className="text-xs gi-text-muted font-medium flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-full">
+                  <IoCalendarOutline className="text-xs text-indigo-500" />
+                  <span>{pDate}</span>
+                </span>
+              </div>
+
+              {/* Big Amount Banner */}
+              <div className="py-2">
+                <span className={`font-mono font-extrabold text-2xl sm:text-3xl md:text-4xl tracking-tight ${amountClass}`}>
+                  {amountSign} ₹{amt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="border-b border-dashed gi-divider my-2" />
+
+              {/* Flow Visualizer: From Ledger -> To Ledger */}
+              <div className="grid grid-cols-[1fr_auto_1fr] gap-2 sm:gap-3 items-center">
+                {/* From Ledger Card */}
+                <div className="p-2.5 sm:p-3.5 rounded-xl gi-surface-secondary border gi-border space-y-0.5 sm:space-y-1 min-w-0">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block truncate">
+                    {isCredit ? "Received In (Debit)" : "Paid From (Credit)"}
+                  </span>
+                  <p className="font-bold text-xs sm:text-sm gi-text-primary truncate" title={fromLedgerName}>{fromLedgerName}</p>
+                  <span className="inline-block text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-slate-200 dark:bg-zinc-800 gi-text-secondary uppercase">
+                    {fromLedgerType}
+                  </span>
+                </div>
+
+                {/* Arrow Indicator */}
+                <div className="flex justify-center shrink-0">
+                  <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full gi-surface-secondary border gi-border flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0">
+                    <IoArrowForward className="text-xs sm:text-base" />
+                  </div>
+                </div>
+
+                {/* To Ledger Card */}
+                <div className="p-2.5 sm:p-3.5 rounded-xl gi-surface-secondary border gi-border space-y-0.5 sm:space-y-1 text-right min-w-0">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block truncate">
+                    {isCredit ? "Received From (Credit)" : "Paid To (Debit)"}
+                  </span>
+                  <p className="font-bold text-xs sm:text-sm gi-text-primary truncate" title={toLedgerName}>{toLedgerName}</p>
+                  <span className="inline-block text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-zinc-800 gi-text-secondary uppercase">
+                    {toLedgerType}
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Remarks Card */}
+            <div className="p-5 sm:p-6 rounded-2xl border gi-border gi-card shadow-xs space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider gi-text-muted flex items-center gap-1.5">
+                <IoDocumentTextOutline className="text-sm text-indigo-500" />
+                <span>Remarks &amp; Notes</span>
+              </h3>
+              <p className="text-sm gi-text-primary leading-relaxed whitespace-pre-wrap pt-1 font-normal">
+                {pRemarks || "No remark provided for this transaction."}
+              </p>
+            </div>
+          </div>
+
+          {/* Right / Sidebar Section (5 cols on Desktop) */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* Metadata Card */}
+            <div className="p-5 sm:p-6 rounded-2xl border gi-border gi-card shadow-xs space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider gi-text-muted border-b gi-divider pb-3 flex items-center gap-1.5">
+                <IoReceiptOutline className="text-sm text-indigo-500" />
+                <span>Transaction Metadata</span>
+              </h3>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="gi-text-muted">Transaction ID</span>
+                  <span className="font-mono font-bold gi-text-primary">{pNumber}</span>
+                </div>
+
+                <div className="flex justify-between items-center gap-2">
+                  <span className="gi-text-muted">Payment Type</span>
+                  <span className="font-semibold gi-text-primary capitalize">{pTypeStr.replace("_", " ") || "Payment"}</span>
+                </div>
+
+                <div className="flex justify-between items-center gap-2">
+                  <span className="gi-text-muted">Payment Mode</span>
+                  <span className="font-semibold gi-text-primary capitalize">{payment?.mode || payment?.payment_mode || "Cash"}</span>
+                </div>
+
+                <div className="flex justify-between items-center gap-2">
+                  <span className="gi-text-muted">Date</span>
+                  <span className="font-semibold gi-text-primary">{pDate}</span>
+                </div>
+
+                {payment?.created_at && (
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="gi-text-muted">Created Timestamp</span>
+                    <span className="font-mono text-[11px] gi-text-secondary">
+                      {new Date(payment.created_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Linked Invoice Card */}
+            {linkedInvoiceNumber && (
+              <div className="p-5 sm:p-6 rounded-2xl border gi-border gi-card shadow-xs space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider gi-text-muted flex items-center gap-1.5">
+                  <IoCardOutline className="text-sm text-indigo-500" />
+                  <span>Linked Document</span>
+                </h3>
+
+                <div className="p-3.5 rounded-xl gi-surface-secondary border gi-border flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold gi-text-muted uppercase">{linkedInvoiceLabel.replace("_", " ")}</p>
+                    <p className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400 truncate">
+                      {linkedInvoiceNumber}
+                    </p>
+                  </div>
+                  {matchingInvoice?.id && (
+                    <Link
+                      href={`/invoiceDetails/${matchingInvoice.id}`}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs hover:bg-indigo-500/20 transition shrink-0 flex items-center gap-1"
+                    >
+                      <span>View</span>
+                      <IoChevronForward className="text-xs" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Photo Proof Attachment Card */}
+            {pProofImage && (
+              <div className="p-5 sm:p-6 rounded-2xl border gi-border gi-card shadow-xs space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider gi-text-muted flex items-center gap-1.5">
+                  <IoImageOutline className="text-sm text-indigo-500" />
+                  <span>Attachment / Photo Proof</span>
+                </h3>
+
+                <div
+                  onClick={() => setShowPhotoModal(true)}
+                  className="relative rounded-xl overflow-hidden border gi-border bg-slate-100 dark:bg-zinc-800 cursor-pointer group aspect-16/9"
+                >
+                  <img
+                    src={pProofImage}
+                    alt="Proof Attachment"
+                    className="w-full h-full object-cover group-hover:scale-105 transition"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-2xs">
+                    <IoImageOutline className="text-lg" />
+                    <span>Click to Expand</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Lightbox Photo Proof Modal */}
@@ -451,3 +544,4 @@ export default function PaymentDetailsView({
     </PermissionGuard>
   );
 }
+

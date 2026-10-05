@@ -53,9 +53,9 @@ export default function PurchaseInvoiceForm() {
         setInvoices(Array.isArray(invoicesRes?.body) ? invoicesRes.body : (invoicesRes?.body?.data || invoicesRes?.body?.invoices || []));
       });
     } else {
-        setParties([]);
-        setItems([]);
-        setInvoices([]);
+      setParties([]);
+      setItems([]);
+      setInvoices([]);
     }
   }, [activeBusiness?.id]);
 
@@ -71,6 +71,31 @@ export default function PurchaseInvoiceForm() {
   const [showItemPopup, setShowItemPopup] = useState(false);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+
+  // Quick Create Item State (Preserves invoice form state & forces Product type for purchase invoices)
+  const [showCreateItemModal, setShowCreateItemModal] = useState(false);
+  const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemSalesPrice, setNewItemSalesPrice] = useState("");
+  const [newItemSalesTaxType, setNewItemSalesTaxType] = useState("Without Tax");
+  const [newItemPurchasePrice, setNewItemPurchasePrice] = useState("");
+  const [newItemPurchaseTaxType, setNewItemPurchaseTaxType] = useState("Without Tax");
+  const [newItemUnit, setNewItemUnit] = useState("PCS");
+  const [newItemGst, setNewItemGst] = useState("None");
+  const [newItemHsn, setNewItemHsn] = useState("");
+  const [newItemStock, setNewItemStock] = useState("");
+
+  const resetNewItemForm = () => {
+    setNewItemName("");
+    setNewItemSalesPrice("");
+    setNewItemSalesTaxType("Without Tax");
+    setNewItemPurchasePrice("");
+    setNewItemPurchaseTaxType("Without Tax");
+    setNewItemUnit("PCS");
+    setNewItemGst("None");
+    setNewItemHsn("");
+    setNewItemStock("");
+  };
 
   const [partySearch, setPartySearch] = useState("");
   const [itemSearch, setItemSearch] = useState("");
@@ -169,7 +194,7 @@ export default function PurchaseInvoiceForm() {
           localStorage.setItem("gi_invoice_prefix", data.invoice_prefix);
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, [activeBusiness, isEditMode]);
 
   // Unique Auto Purchase Invoice Number Logic according to API invoices
@@ -397,7 +422,151 @@ export default function PurchaseInvoiceForm() {
 
   const handleRemoveItem = (id) => {
     if (!window.confirm("Are you sure you want to remove this item from the invoice?")) return;
-    setSelectedItems(selectedItems.filter((item) => item.id !== id));
+    setSelectedItems(selectedItems.filter((item) => (item.id || item.item_id) !== id));
+  };
+
+  const handleUpdateItemInline = (
+    itemId: string | number,
+    field: "price" | "quantity" | "gstRate",
+    value: number
+  ) => {
+    setSelectedItems(
+      selectedItems.map((item: any) => {
+        const idMatches = (item.id || item.item_id) === itemId;
+        if (!idMatches) return item;
+
+        let price = Number(item.price ?? item.purchasePrice ?? item.purchase_price ?? item.rate ?? 0);
+        let quantity = Number(item.quantity ?? item.qty ?? 1);
+        let gstRate = Number(item.gstRate ?? parseGstRate(item.gst) ?? 0);
+        const taxType = item.taxType || item.purchaseTaxType || item.purchase_price_tax_type || "Without Tax";
+
+        if (field === "price") {
+          price = Math.max(0, value);
+        } else if (field === "quantity") {
+          quantity = Math.max(1, value);
+        } else if (field === "gstRate") {
+          gstRate = Math.max(0, value);
+        }
+
+        const gstStr = gstRate > 0 ? `GST @ ${gstRate}%` : "None";
+
+        const discountType = item.discountType || "percent";
+        const discountValue = Number(item.discountValue || 0);
+        const basePriceTotal = price * quantity;
+        let discountAmount = 0;
+        if (discountType === "percent") {
+          discountAmount = (basePriceTotal * discountValue) / 100;
+        } else {
+          discountAmount = discountValue;
+        }
+        const taxableBase = Math.max(0, basePriceTotal - discountAmount);
+
+        let taxableAmount = taxableBase;
+        let taxAmount = 0;
+        let lineTotal = taxableBase;
+
+        if (taxType === "With Tax") {
+          taxableAmount = gstRate > 0 ? taxableBase / (1 + gstRate / 100) : taxableBase;
+          taxAmount = taxableBase - taxableAmount;
+          lineTotal = taxableBase;
+        } else {
+          taxAmount = (taxableBase * gstRate) / 100;
+          lineTotal = taxableBase + taxAmount;
+        }
+
+        return {
+          ...item,
+          price,
+          purchasePrice: price,
+          purchase_price: price,
+          rate: price,
+          quantity,
+          qty: quantity,
+          gst: gstStr,
+          gstRate,
+          taxableAmount,
+          taxAmount,
+          lineTotal,
+          amount: lineTotal,
+        };
+      })
+    );
+  };
+
+  const handleCreateItemAndAdd = async () => {
+    if (!newItemName.trim()) {
+      toast.error("Please enter an item name.");
+      return;
+    }
+
+    try {
+      setIsCreatingItem(true);
+      const parseGstRateVal = (gstVal: string) => {
+        if (!gstVal || gstVal === "None") return 0;
+        const match = String(gstVal).match(/(\d+(\.\d+)?)/);
+        return match ? parseFloat(match[1]) : 0;
+      };
+
+      const gstRateVal = parseGstRateVal(newItemGst);
+
+      const payload: any = {
+        item_name: newItemName.trim(),
+        item_type: "product" as const,
+        unit: newItemUnit || "PCS",
+        sales_price: Number(newItemSalesPrice || 0),
+        sales_price_tax_type: newItemSalesTaxType === "With Tax" ? "with_tax" : "without_tax",
+        purchase_price: Number(newItemPurchasePrice || 0),
+        purchase_price_tax_type: newItemPurchaseTaxType === "With Tax" ? "with_tax" : "without_tax",
+        tax_rate: gstRateVal,
+        current_stock: Number(newItemStock || 0),
+      };
+
+      if (newItemHsn.trim()) {
+        payload.hsn_sac_code = newItemHsn.trim();
+        payload.hsn_code = newItemHsn.trim();
+      }
+
+      const res: any = await itemApi.createItem(payload);
+      const created = res?.body?.item || res?.body?.data || res?.body || res?.data || res;
+
+      const itemToAdd = {
+        id: created?.id || created?.item_id || `ITM-${Date.now()}`,
+        item_name: created?.item_name || newItemName.trim(),
+        name: created?.item_name || newItemName.trim(),
+        itemName: created?.item_name || newItemName.trim(),
+        item_type: "product",
+        itemType: "Product",
+        unit: created?.unit || newItemUnit || "PCS",
+        sales_price: Number(created?.sales_price ?? newItemSalesPrice ?? 0),
+        salesPrice: Number(created?.sales_price ?? newItemSalesPrice ?? 0),
+        price: Number(created?.purchase_price ?? newItemPurchasePrice ?? 0),
+        purchase_price: Number(created?.purchase_price ?? newItemPurchasePrice ?? 0),
+        purchasePrice: Number(created?.purchase_price ?? newItemPurchasePrice ?? 0),
+        tax_rate: gstRateVal,
+        gstRate: gstRateVal,
+        gst: newItemGst,
+        taxType: newItemPurchaseTaxType,
+        purchase_price_tax_type: newItemPurchaseTaxType === "With Tax" ? "with_tax" : "without_tax",
+        current_stock: Number(created?.current_stock ?? newItemStock ?? 0),
+        stockQuantity: Number(created?.current_stock ?? newItemStock ?? 0),
+        hsn_code: newItemHsn.trim(),
+        hsnCode: newItemHsn.trim(),
+      };
+
+      toast.success(`Item "${newItemName.trim()}" created and added to invoice!`);
+
+      setItems((prev: any[]) => [itemToAdd, ...(Array.isArray(prev) ? prev : [])]);
+      handleToggleItem(itemToAdd);
+
+      setShowCreateItemModal(false);
+      setShowItemPopup(false);
+      resetNewItemForm();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Failed to create item");
+    } finally {
+      setIsCreatingItem(false);
+    }
   };
 
   const handlePopupQuantityChange = (item: any, delta: number) => {
@@ -558,8 +727,8 @@ export default function PurchaseInvoiceForm() {
     discountType === "percent" || discountType === "percentage"
       ? Number(discountValue || 0)
       : itemsTotalWithTax > 0
-      ? (discountAmount / itemsTotalWithTax) * 100
-      : 0;
+        ? (discountAmount / itemsTotalWithTax) * 100
+        : 0;
 
   const totalAdditionalCharges = additionalCharges.reduce(
     (sum, ch) => sum + Number(ch.amount || 0),
@@ -833,8 +1002,9 @@ export default function PurchaseInvoiceForm() {
           </section>
 
           {/* Items Section */}
-          <section className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+          <section className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-4 sm:p-5 shadow-sm space-y-4">
+            {/* Desktop Header */}
+            <div className="hidden sm:flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-white">Purchased Items & Supplies</h3>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">Add inventory products or services to this bill</p>
@@ -850,78 +1020,229 @@ export default function PurchaseInvoiceForm() {
               </button>
             </div>
 
-            {selectedItems.length > 0 ? (
-              <div className="divide-y divide-slate-200 dark:divide-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-800 overflow-hidden">
-                {selectedItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3.5 bg-slate-50/50 dark:bg-zinc-800/40 flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                        {getItemName(item)}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                        <span>₹{Number(item.price || item.purchasePrice || 0).toFixed(2)} / {item.unit || "unit"}</span>
-                        {item.gst && item.gst !== "None" && (
-                          <span className="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.2 rounded font-medium text-[10px]">
-                            {item.gst} ({item.taxType || "With Tax"})
-                          </span>
-                        )}
+            {/* Mobile Header & Item List (Exact Reference Design) */}
+            <div className="block sm:hidden space-y-3">
+              <h3 className="font-bold text-base text-slate-800 dark:text-white">Items</h3>
+
+              {selectedItems.length > 0 && (
+                <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xs divide-y divide-slate-100 dark:divide-zinc-800 overflow-hidden">
+                  {selectedItems.map((item, index) => {
+                    const name = getItemName(item);
+                    const price = Number(item.price ?? item.purchasePrice ?? item.purchase_price ?? item.rate ?? 0);
+                    const qty = Number(item.quantity ?? item.qty ?? 1);
+                    const unit = item.unit || "PCS";
+                    const gstRate = Number(item.gstRate ?? parseGstRate(item.gst) ?? 0);
+                    const taxTypeRaw = item.taxType || item.purchaseTaxType || "Without Tax";
+                    const isWithTax = taxTypeRaw === "With Tax" || taxTypeRaw === "with_tax";
+
+                    const basePriceTotal = price * qty;
+                    const discountAmount = item.discountAmount || 0;
+                    const taxableBase = Math.max(0, basePriceTotal - discountAmount);
+
+                    let taxableAmount = taxableBase;
+                    let taxAmount = 0;
+                    let lineTotal = taxableBase;
+
+                    if (isWithTax) {
+                      taxableAmount = gstRate > 0 ? taxableBase / (1 + gstRate / 100) : taxableBase;
+                      taxAmount = taxableBase - taxableAmount;
+                      lineTotal = taxableBase;
+                    } else {
+                      taxAmount = (taxableBase * gstRate) / 100;
+                      lineTotal = taxableBase + taxAmount;
+                    }
+
+                    const lineTotalFormatted = lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const priceFormatted = price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const taxAmountFormatted = taxAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    return (
+                      <div key={`mob-${item.id || item.item_id || index}`} className="p-4 flex items-start justify-between gap-3">
+                        {/* Left Side: Title & Subtitle Info */}
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h4 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                            {name}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 font-medium">
+                            <span>Qty x Rate</span>
+                            <span className="font-semibold text-slate-700 dark:text-zinc-300">
+                              {qty} {unit} x ₹{priceFormatted}
+                            </span>
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                            {isWithTax ? "With tax" : "Without tax"}
+                            {gstRate > 0 ? ` (GST ${gstRate}%)` : " (GST Exempt)"}
+                          </p>
+                        </div>
+
+                        {/* Right Side: Edit Button & Amounts */}
+                        <div className="text-right space-y-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditItemModal(item)}
+                            className="px-5 py-1 rounded-full border border-indigo-500 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400 font-bold text-xs hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <p className="font-extrabold text-base text-slate-900 dark:text-white pt-0.5">
+                            ₹{lineTotalFormatted}
+                          </p>
+                          {gstRate > 0 && (
+                            <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                              + GST: ₹{taxAmountFormatted}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+              )}
 
-                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[10px] uppercase font-semibold text-slate-400 dark:text-zinc-500">Qty:</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityChange(item.id, Number(e.target.value))
-                          }
-                          className="w-14 h-8 rounded border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-center text-xs font-semibold outline-none focus:border-indigo-500 text-slate-900 dark:text-white"
-                        />
-                      </div>
-
-                      <div className="text-right min-w-[65px]">
-                        <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                          ₹{Number(item.lineTotal || (item.price * item.quantity)).toFixed(2)}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditItemModal(item)}
-                        className="h-8 px-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 font-semibold text-xs hover:bg-indigo-50 dark:hover:bg-zinc-700 transition cursor-pointer flex items-center gap-1"
-                        title="Edit Item Price, Qty, Unit, Discount & GST"
-                      >
-                        <IoCreateOutline className="text-sm" />
-                        <span className="hidden sm:inline">Edit</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-zinc-700 transition cursor-pointer flex items-center justify-center"
-                        title="Remove Item"
-                      >
-                        <IoClose className="text-lg" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
+              {/* Dashed Add Items Button */}
+              <button
+                type="button"
                 onClick={() => setShowItemPopup(true)}
-                className="rounded-lg border-2 border-dashed border-slate-200 dark:border-zinc-800 p-8 text-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition"
+                className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 font-bold text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
               >
-                <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">No items added yet</p>
-                <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">Click here or the button above to add items to this purchase bill</p>
-              </div>
-            )}
+                <IoAdd className="text-lg" />
+                <span>Add Items</span>
+              </button>
+            </div>
+
+            {/* Desktop Items Table View */}
+            <div className="hidden sm:block">
+              {selectedItems.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs">
+                  <table className="w-full text-left border-collapse min-w-[650px]">
+                    <thead>
+                      <tr className="bg-slate-100/80 dark:bg-zinc-800/70 text-[11px] uppercase tracking-wider font-bold text-slate-500 dark:text-zinc-400 border-b border-slate-200 dark:border-zinc-800">
+                        <th className="py-3 px-3.5 w-10 text-center">#</th>
+                        <th className="py-3 px-3.5">Item Name</th>
+                        <th className="py-3 px-3.5 w-32">Purchase Price (₹)</th>
+                        <th className="py-3 px-3.5 w-36">GST Tax</th>
+                        <th className="py-3 px-3.5 w-24 text-center">Qty</th>
+                        <th className="py-3 px-3.5 w-32 text-right">Total (₹)</th>
+                        <th className="py-3 px-3.5 w-12 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60 text-xs">
+                      {selectedItems.map((item, index) => {
+                        const currentPrice = Number(item.price ?? item.purchasePrice ?? item.purchase_price ?? item.rate ?? 0);
+                        const currentQty = Number(item.quantity ?? item.qty ?? 1);
+                        const currentGstRate = Number(item.gstRate ?? parseGstRate(item.gst) ?? 0);
+                        const lineTotalVal = Number(item.lineTotal || (currentPrice * currentQty)).toFixed(2);
+                        const itemId = item.id || item.item_id;
+
+                        return (
+                          <tr
+                            key={itemId}
+                            className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition"
+                          >
+                            {/* # Index */}
+                            <td className="py-3 px-3.5 text-center font-bold text-slate-400 dark:text-zinc-500">
+                              {index + 1}
+                            </td>
+
+                            {/* Item Name & Details */}
+                            <td className="py-3 px-3.5">
+                              <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate max-w-[220px]">
+                                {getItemName(item)}
+                              </p>
+                              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
+                                Unit: <span className="font-medium text-slate-600 dark:text-zinc-400">{item.unit || "unit"}</span>
+                              </p>
+                            </td>
+
+                            {/* Purchase Price Input */}
+                            <td className="py-3 px-3.5">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={currentPrice}
+                                onChange={(e) =>
+                                  handleUpdateItemInline(
+                                    itemId,
+                                    "price",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-full h-8 px-2.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900"
+                              />
+                            </td>
+
+                            {/* GST Tax Dropdown */}
+                            <td className="py-3 px-3.5">
+                              <select
+                                value={currentGstRate}
+                                onChange={(e) =>
+                                  handleUpdateItemInline(
+                                    itemId,
+                                    "gstRate",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-full h-8 px-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer focus:bg-white dark:focus:bg-zinc-900"
+                              >
+                                <option value={0}>None (0%)</option>
+                                <option value={5}>GST @ 5%</option>
+                                <option value={12}>GST @ 12%</option>
+                                <option value={18}>GST @ 18%</option>
+                                <option value={28}>GST @ 28%</option>
+                              </select>
+                            </td>
+
+                            {/* Quantity Input */}
+                            <td className="py-3 px-3.5">
+                              <input
+                                type="number"
+                                min="1"
+                                step="any"
+                                value={currentQty}
+                                onChange={(e) =>
+                                  handleUpdateItemInline(
+                                    itemId,
+                                    "quantity",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-full h-8 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-center text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900"
+                              />
+                            </td>
+
+                            {/* Total Amount */}
+                            <td className="py-3 px-3.5 text-right font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                              ₹{Number(lineTotalVal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+
+                            {/* Remove Action */}
+                            <td className="py-3 px-3.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(itemId)}
+                                className="h-7 w-7 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer inline-flex items-center justify-center"
+                                title="Remove Item"
+                              >
+                                <IoClose className="text-base" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div
+                  onClick={() => setShowItemPopup(true)}
+                  className="rounded-lg border-2 border-dashed border-slate-200 dark:border-zinc-800 p-8 text-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-500 transition"
+                >
+                  <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">No items added yet</p>
+                  <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">Click here or the button above to add items to this purchase bill</p>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Adjustments & Notes */}
@@ -939,8 +1260,8 @@ export default function PurchaseInvoiceForm() {
                     type="button"
                     onClick={() => setDiscountType("percent")}
                     className={`flex-1 py-1 rounded text-xs font-semibold transition cursor-pointer ${discountType === "percent"
-                        ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                        : "text-slate-600 dark:text-zinc-400"
+                      ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                      : "text-slate-600 dark:text-zinc-400"
                       }`}
                   >
                     Percent (%)
@@ -949,8 +1270,8 @@ export default function PurchaseInvoiceForm() {
                     type="button"
                     onClick={() => setDiscountType("amount")}
                     className={`flex-1 py-1 rounded text-xs font-semibold transition cursor-pointer ${discountType === "amount"
-                        ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                        : "text-slate-600 dark:text-zinc-400"
+                      ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                      : "text-slate-600 dark:text-zinc-400"
                       }`}
                   >
                     Fixed (₹)
@@ -1119,18 +1440,16 @@ export default function PurchaseInvoiceForm() {
                     }
                     setIsPaid(!isPaid);
                   }}
-                  className={`relative w-9 h-5 rounded-full transition cursor-pointer ${
-                    isPaid
+                  className={`relative w-9 h-5 rounded-full transition cursor-pointer ${isPaid
                       ? "bg-emerald-600"
                       : !isEditMode && isPaymentLimitReached
-                      ? "bg-slate-200 dark:bg-zinc-800 opacity-50 cursor-not-allowed"
-                      : "bg-slate-300 dark:bg-zinc-700"
-                  }`}
+                        ? "bg-slate-200 dark:bg-zinc-800 opacity-50 cursor-not-allowed"
+                        : "bg-slate-300 dark:bg-zinc-700"
+                    }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
-                      isPaid ? "left-4.5" : "left-0.5"
-                    }`}
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${isPaid ? "left-4.5" : "left-0.5"
+                      }`}
                   />
                 </button>
               </div>
@@ -1203,7 +1522,7 @@ export default function PurchaseInvoiceForm() {
                 <MobiscrollDatePicker
                   label="Invoice Date (Today)"
                   value={tempInvoiceDate}
-                  onChange={() => {}}
+                  onChange={() => { }}
                   disabled
                   readOnly
                 />
@@ -1394,9 +1713,16 @@ export default function PurchaseInvoiceForm() {
               {filteredItems.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400 dark:text-zinc-500">
                   No items found.{" "}
-                  <Link href="/addItem" className="text-indigo-600 dark:text-indigo-400 font-semibold underline">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowItemPopup(false);
+                      setShowCreateItemModal(true);
+                    }}
+                    className="text-indigo-600 dark:text-indigo-400 font-semibold underline cursor-pointer"
+                  >
                     + Create New Item
-                  </Link>
+                  </button>
                 </div>
               ) : (
                 filteredItems.map((item: any) => {
@@ -1418,11 +1744,10 @@ export default function PurchaseInvoiceForm() {
                           handleToggleItem(item);
                         }
                       }}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition cursor-pointer text-left ${
-                        isSelected
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition cursor-pointer text-left ${isSelected
                           ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500"
                           : "bg-slate-50/50 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800 hover:border-indigo-500"
-                      }`}
+                        }`}
                     >
                       <div className="min-w-0 pr-2">
                         <p className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{name}</p>
@@ -1477,12 +1802,16 @@ export default function PurchaseInvoiceForm() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link
-                  href="/addItem"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowItemPopup(false);
+                    setShowCreateItemModal(true);
+                  }}
                   className="px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold text-center shrink-0 cursor-pointer"
                 >
                   + Create Item
-                </Link>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowItemPopup(false)}
@@ -1491,6 +1820,208 @@ export default function PurchaseInvoiceForm() {
                   Done Selecting ({selectedItems.length})
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Create Item Modal */}
+      {showCreateItemModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Create New Item</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Add new inventory product & select for purchase bill</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateItemModal(false);
+                  resetNewItemForm();
+                }}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              >
+                <IoClose className="text-xl" />
+              </button>
+            </div>
+
+            {/* Locked Item Type Notice */}
+            <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+              <span className="font-bold shrink-0">Type: Product</span>
+              <span className="text-[11px] text-amber-700 dark:text-amber-400">(Service items cannot be created from invoice creation)</span>
+            </div>
+
+            <div className="space-y-3">
+              {/* Item Name */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Item Name *
+                </label>
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="e.g. Raw Material Packaging"
+                  className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Purchase Price Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Purchase Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newItemPurchasePrice}
+                    onChange={(e) => setNewItemPurchasePrice(e.target.value)}
+                    placeholder="e.g. 350"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Purchase Tax Type
+                  </label>
+                  <select
+                    value={newItemPurchaseTaxType}
+                    onChange={(e) => setNewItemPurchaseTaxType(e.target.value)}
+                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="Without Tax">Without Tax (Exclusive)</option>
+                    <option value="With Tax">With Tax (Inclusive)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Sales Price Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Sales Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newItemSalesPrice}
+                    onChange={(e) => setNewItemSalesPrice(e.target.value)}
+                    placeholder="e.g. 500"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Sales Tax Type
+                  </label>
+                  <select
+                    value={newItemSalesTaxType}
+                    onChange={(e) => setNewItemSalesTaxType(e.target.value)}
+                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="Without Tax">Without Tax (Exclusive)</option>
+                    <option value="With Tax">With Tax (Inclusive)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Unit & GST Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Unit
+                  </label>
+                  <select
+                    value={newItemUnit}
+                    onChange={(e) => setNewItemUnit(e.target.value)}
+                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="PCS">PCS</option>
+                    <option value="KG">KG</option>
+                    <option value="G">G</option>
+                    <option value="L">L</option>
+                    <option value="ML">ML</option>
+                    <option value="M">M</option>
+                    <option value="FT">FT</option>
+                    <option value="BOX">BOX</option>
+                    <option value="PKT">PKT</option>
+                    <option value="SET">SET</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    GST Tax Rate
+                  </label>
+                  <select
+                    value={newItemGst}
+                    onChange={(e) => setNewItemGst(e.target.value)}
+                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="None">None (0%)</option>
+                    <option value="GST @ 0%">GST @ 0%</option>
+                    <option value="GST @ 5%">GST @ 5%</option>
+                    <option value="GST @ 12%">GST @ 12%</option>
+                    <option value="GST @ 18%">GST @ 18%</option>
+                    <option value="GST @ 28%">GST @ 28%</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* HSN Code & Opening Stock */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    HSN Code
+                  </label>
+                  <input
+                    type="text"
+                    value={newItemHsn}
+                    onChange={(e) => setNewItemHsn(e.target.value)}
+                    placeholder="e.g. 8471"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Opening Stock Qty
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newItemStock}
+                    onChange={(e) => setNewItemStock(e.target.value)}
+                    placeholder="e.g. 10"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateItemModal(false);
+                  resetNewItemForm();
+                }}
+                className="h-9 px-4 rounded-xl border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateItemAndAdd}
+                disabled={isCreatingItem}
+                className="h-9 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isCreatingItem ? "Creating..." : "Save & Add to Bill"}
+              </button>
             </div>
           </div>
         </div>

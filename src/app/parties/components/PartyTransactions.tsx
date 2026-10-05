@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import {
   IoDocumentTextOutline,
@@ -26,6 +26,7 @@ function formatDateDDMMYYYY(dateStr: any) {
 export default function PartyTransactions({ party, activeTab = "invoices" }: { party: any; activeTab?: "invoices" | "payments" }) {
   const { activeBusiness } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -150,7 +151,7 @@ export default function PartyTransactions({ party, activeTab = "invoices" }: { p
                 return (
                   <div
                     key={pay.id}
-                    onClick={() => router.push(`/paymentDetails/${pay.id}`)}
+                    onClick={() => router.push(`/paymentDetails/${pay.id}?from=${encodeURIComponent(pathname)}`)}
                     className="p-3.5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400/50 active:scale-[0.99] transition"
                   >
                     <div className="flex items-center gap-3 min-w-0">

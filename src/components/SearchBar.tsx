@@ -248,7 +248,14 @@ export default function SearchBar({
     if (invData && onSelectInvoice) {
       onSelectInvoice(invData);
     } else {
-      router.push(url);
+      let finalUrl = url;
+      if (url.startsWith("/paymentDetails/") && !url.includes("?from=")) {
+        const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
+        if (currentPath) {
+          finalUrl = `${url}?from=${encodeURIComponent(currentPath)}`;
+        }
+      }
+      router.push(finalUrl);
     }
   };
 

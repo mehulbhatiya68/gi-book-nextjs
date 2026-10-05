@@ -921,22 +921,46 @@ export default function InvoiceDetailsView() {
                 ) : (
                   <div className="space-y-2">
                     {resolvedPaymentHistory.map((ph, idx) => (
-                      <div key={ph.id || idx} className="p-3 rounded-xl gi-surface-secondary border gi-divider space-y-1">
+                      <div
+                        key={ph.id || idx}
+                        onClick={() => {
+                          if (ph.id && !String(ph.id).startsWith("auto-tx-")) {
+                            setShowTxModal(false);
+                            router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`);
+                          }
+                        }}
+                        className={`p-3 rounded-xl gi-surface-secondary border gi-divider space-y-1 ${
+                          !String(ph.id).startsWith("auto-tx-") ? "cursor-pointer hover:border-indigo-500/40 transition" : ""
+                        }`}
+                      >
                         <div className="flex items-center justify-between text-xs font-bold gi-text-primary">
-                          <span>#{ph.number || ph.id}</span>
-                          <div className="flex items-center gap-2">
+                          <span className="text-indigo-600 dark:text-indigo-400 font-mono">#{ph.number || ph.id}</span>
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <span className="font-mono text-emerald-600 dark:text-emerald-400">
                               ₹{Number(ph.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                             </span>
                             {!String(ph.id).startsWith("auto-tx-") && (
-                              <button
-                                type="button"
-                                onClick={() => setPaymentToDelete(ph)}
-                                title="Delete receipt"
-                                className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
-                              >
-                                <IoTrashOutline className="text-xs" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowTxModal(false);
+                                    router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`);
+                                  }}
+                                  title="View Payment Details"
+                                  className="p-1 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded transition cursor-pointer"
+                                >
+                                  <IoEyeOutline className="text-xs" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setPaymentToDelete(ph)}
+                                  title="Delete receipt"
+                                  className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
+                                >
+                                  <IoTrashOutline className="text-xs" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1319,7 +1343,14 @@ export default function InvoiceDetailsView() {
                       {resolvedPaymentHistory.map((ph, idx) => (
                         <tr
                           key={ph.id || idx}
-                          className="hover:bg-[var(--gi-hover)] transition"
+                          onClick={() => {
+                            if (ph.id && !String(ph.id).startsWith("auto-tx-")) {
+                              router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`);
+                            }
+                          }}
+                          className={`hover:bg-[var(--gi-hover)] transition ${
+                            !String(ph.id).startsWith("auto-tx-") ? "cursor-pointer" : ""
+                          }`}
                         >
                           <td className="py-2 px-2 font-bold text-indigo-600 dark:text-indigo-400">#{ph.number || ph.id}</td>
                           <td className="py-2 px-2 gi-text-secondary">{ph.date} {ph.time && <span className="gi-text-muted">• {ph.time}</span>}</td>
@@ -1328,6 +1359,14 @@ export default function InvoiceDetailsView() {
                           <td className="py-2 px-2 text-right" onClick={(e) => e.stopPropagation()}>
                             {!String(ph.id).startsWith("auto-tx-") && (
                               <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`)}
+                                  title="View Payment Details"
+                                  className="p-1 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer"
+                                >
+                                  <IoEyeOutline className="text-sm" />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => setPaymentToDelete(ph)}

@@ -525,7 +525,7 @@ export default function LedgerTransactionsView() {
                     key={tx.id}
                     onClick={() => {
                       const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
-                      if (targetId) router.push(`/paymentDetails/${targetId}`);
+                      if (targetId) router.push(`/paymentDetails/${targetId}?from=/ledgerTransactions`);
                     }}
                     className="gi-card p-4 rounded-2xl shadow-xs border gi-border space-y-2 hover:border-indigo-500/40 transition cursor-pointer active:scale-[0.99]"
                   >
@@ -681,7 +681,11 @@ export default function LedgerTransactionsView() {
                     return (
                       <tr
                         key={tx.id}
-                        className="hover:bg-[var(--gi-hover)] transition"
+                        onClick={() => {
+                          const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
+                          if (targetId) router.push(`/paymentDetails/${targetId}?from=/ledgerTransactions`);
+                        }}
+                        className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
                       >
                         <td className="py-2 px-2 font-semibold gi-text-primary whitespace-nowrap">
                           {dateStr}
@@ -708,7 +712,7 @@ export default function LedgerTransactionsView() {
                             <span className="gi-text-muted text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2 max-w-[110px] truncate">
+                        <td className="py-2 px-2 max-w-[110px] truncate" onClick={(e) => e.stopPropagation()}>
                           {linkedInv ? (
                             linkedInv.id ? (
                               <Link
@@ -730,11 +734,24 @@ export default function LedgerTransactionsView() {
                         </td>
                         <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
+                                if (targetId) router.push(`/paymentDetails/${targetId}?from=/ledgerTransactions`);
+                              }}
+                              className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                              title="View Transaction Details"
+                            >
+                              <IoEyeOutline className="text-xs" />
+                            </button>
+
                             {proofImg && (
                               <button
                                 type="button"
                                 onClick={() => setSelectedProofImg(proofImg)}
-                                className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                className="p-1.5 rounded-md gi-badge-success transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
                                 title="View Proof"
                               >
                                 <IoEyeOutline className="text-xs" />

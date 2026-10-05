@@ -557,7 +557,8 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
                     onClick={() => {
                       if (ph.id && !String(ph.id).startsWith("auto-tx-")) {
                         onClose();
-                        router.push(`/paymentDetails/${ph.id}`);
+                        const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
+                        router.push(`/paymentDetails/${ph.id}${currentPath ? `?from=${encodeURIComponent(currentPath)}` : ""}`);
                       }
                     }}
                     className={`py-1.5 flex items-center justify-between transition ${

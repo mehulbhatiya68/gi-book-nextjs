@@ -217,50 +217,8 @@ export default function Topbar({
         style={{ left: isDesktop ? `${sidebarWidth}px` : 0 }}
         suppressHydrationWarning
       >
-        {/* ── Left: Desktop Sidebar Toggle / Mobile Menu + Mobile Logo + Search Bar ── */}
+        {/* ── Left: Mobile Menu + Mobile Logo + Search Bar ── */}
         <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 flex-1 max-w-md">
-          {/* Desktop ChatGPT-style Panel Sidebar Toggle Button */}
-          {onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="h-10 w-10 rounded-xl bg-slate-100/70 hover:bg-slate-200/90 dark:bg-zinc-800/60 dark:hover:bg-zinc-700/80 gi-text-secondary hover:gi-text-primary hidden md:flex items-center justify-center transition-all duration-200 ease-in-out cursor-pointer shrink-0 shadow-xs border border-slate-200/60 dark:border-zinc-700/60"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isCollapsed ? (
-                /* PanelLeftOpen Icon */
-                <svg
-                  className="w-[21px] h-[21px] transition-transform duration-200 text-slate-700 dark:text-slate-200"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="18" height="18" x="3" y="3" rx="3" />
-                  <path d="M9 3v18" />
-                  <path d="m13 15 3-3-3-3" />
-                </svg>
-              ) : (
-                /* PanelLeftClose Icon */
-                <svg
-                  className="w-[21px] h-[21px] transition-transform duration-200 text-slate-700 dark:text-slate-200"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect width="18" height="18" x="3" y="3" rx="3" />
-                  <path d="M9 3v18" />
-                  <path d="m14 9-3 3 3 3" />
-                </svg>
-              )}
-            </button>
-          )}
 
           {/* Mobile Drawer Toggle */}
           <button

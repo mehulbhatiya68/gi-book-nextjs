@@ -5,7 +5,7 @@ export const MAIN_PAGES = [
   "/home",
   "/invoice",
   "/payments",
-  "/payments/history",
+  "/paymentHistory",
   "/ledgers",
   "/ledgerTransactions",
   "/siteProject",
@@ -75,7 +75,7 @@ export function getSmartBackUrl(
     return "/ledgerTransactions";
   }
   if (path.includes("paymentdetails") || path.includes("receivedpayment")) {
-    return "/payments/history";
+    return "/paymentHistory";
   }
   if (path.includes("invoicedetails") || path.includes("invoice")) {
     return "/invoice";
@@ -118,6 +118,24 @@ export function handleSmartBack(
     return;
   }
 
+  // If explicitly provided a 'from' query param, navigate to it
+  if (searchFromParam && searchFromParam.startsWith("/")) {
+    router.push(searchFromParam);
+    return;
+  }
+
+  // If explicit back URL is given
+  if (explicitBackUrl && explicitBackUrl.startsWith("/")) {
+    router.push(explicitBackUrl);
+    return;
+  }
+
+  // Try browser history back if user navigated here in-app
+  if (typeof window !== "undefined" && window.history.length > 1) {
+    router.back();
+    return;
+  }
+
   const targetUrl = getSmartBackUrl(
     currentPathname,
     searchFromParam,
@@ -127,3 +145,4 @@ export function handleSmartBack(
 
   router.push(targetUrl);
 }
+

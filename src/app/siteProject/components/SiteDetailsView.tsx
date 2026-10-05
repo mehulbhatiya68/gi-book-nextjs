@@ -247,41 +247,47 @@ export default function SiteDetailsView() {
               </div>
             ) : (
               <div className="space-y-2.5">
-                {transactions.map((tx: any) => (
-                  <div
-                    key={tx.id}
-                    className="bg-white dark:bg-zinc-900 rounded-2xl p-3.5 shadow-xs space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-xs font-bold gi-text-primary block font-mono">
-                          {tx.transaction_number || tx.number || (tx.id ? `TXN-${String(tx.id).slice(0, 8).toUpperCase()}` : "Transaction")}
-                        </span>
-                        <span className="text-[11px] gi-text-muted">
-                          {tx.transaction_date || tx.created_at ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString("en-IN") : "N/A"}
+                {transactions.map((tx: any) => {
+                  const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
+                  return (
+                    <div
+                      key={tx.id}
+                      onClick={() => {
+                        if (targetId) router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
+                      }}
+                      className="bg-white dark:bg-zinc-900 rounded-2xl p-3.5 shadow-xs space-y-2 cursor-pointer hover:border-indigo-500/40 transition active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold gi-text-primary block font-mono">
+                            {tx.transaction_number || tx.number || (tx.id ? `TXN-${String(tx.id).slice(0, 8).toUpperCase()}` : "Transaction")}
+                          </span>
+                          <span className="text-[11px] gi-text-muted">
+                            {tx.transaction_date || tx.created_at ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString("en-IN") : "N/A"}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold font-mono text-slate-800 dark:text-slate-100">
+                          ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </span>
                       </div>
-                      <span className="text-xs font-bold font-mono text-slate-800 dark:text-slate-100">
-                        ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t gi-divider text-xs">
-                      <div>
-                        <span className="gi-text-muted block text-[11px]">Party Account</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200 truncate block">
-                          {tx.party_ledger?.name || tx.party_name || "-"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="gi-text-muted block text-[11px]">Payment Account</span>
-                        <span className="font-medium gi-text-secondary truncate block">
-                          {tx.payment_ledger?.name || tx.payment_name || "-"}
-                        </span>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t gi-divider text-xs">
+                        <div>
+                          <span className="gi-text-muted block text-[11px]">Party Account</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-200 truncate block">
+                            {tx.party_ledger?.name || tx.party_name || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="gi-text-muted block text-[11px]">Payment Account</span>
+                          <span className="font-medium gi-text-secondary truncate block">
+                            {tx.payment_ledger?.name || tx.payment_name || "-"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -492,35 +498,44 @@ export default function SiteDetailsView() {
                       </td>
                     </tr>
                   ) : (
-                    transactions.map((tx: any) => (
-                      <tr key={tx.id} className="hover:bg-[var(--gi-hover)] transition">
-                        <td className="py-3 px-4 font-medium gi-text-secondary">
-                          {tx.transaction_date || tx.created_at ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString("en-IN") : "N/A"}
-                        </td>
-                        <td className="py-3 px-4 font-semibold gi-text-primary font-mono">
-                          {tx.transaction_number || tx.number || (tx.id ? `TXN-${String(tx.id).slice(0, 8).toUpperCase()}` : "—")}
-                        </td>
-                        <td className="py-3 px-4 font-medium gi-text-primary">
-                          {tx.party_ledger?.name || tx.party_name || "-"}
-                        </td>
-                        <td className="py-3 px-4 gi-text-secondary">
-                          {tx.payment_ledger?.name || tx.payment_name || "-"}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${tx.type === "payment_in"
-                              ? "gi-badge-success"
-                              : tx.type === "payment_out"
-                                ? "gi-badge-warning"
-                                : "gi-badge-info"
-                            }`}>
-                            {tx.type ? tx.type.replace("_", " ") : "Transaction"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right font-extrabold gi-text-primary">
-                          ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    ))
+                    transactions.map((tx: any) => {
+                      const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
+                      return (
+                        <tr
+                          key={tx.id}
+                          onClick={() => {
+                            if (targetId) router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
+                          }}
+                          className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
+                        >
+                          <td className="py-3 px-4 font-medium gi-text-secondary">
+                            {tx.transaction_date || tx.created_at ? new Date(tx.transaction_date || tx.created_at).toLocaleDateString("en-IN") : "N/A"}
+                          </td>
+                          <td className="py-3 px-4 font-semibold gi-text-primary font-mono">
+                            {tx.transaction_number || tx.number || (tx.id ? `TXN-${String(tx.id).slice(0, 8).toUpperCase()}` : "—")}
+                          </td>
+                          <td className="py-3 px-4 font-medium gi-text-primary">
+                            {tx.party_ledger?.name || tx.party_name || "-"}
+                          </td>
+                          <td className="py-3 px-4 gi-text-secondary">
+                            {tx.payment_ledger?.name || tx.payment_name || "-"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${tx.type === "payment_in"
+                                ? "gi-badge-success"
+                                : tx.type === "payment_out"
+                                  ? "gi-badge-warning"
+                                  : "gi-badge-info"
+                              }`}>
+                              {tx.type ? tx.type.replace("_", " ") : "Transaction"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-extrabold gi-text-primary">
+                            ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

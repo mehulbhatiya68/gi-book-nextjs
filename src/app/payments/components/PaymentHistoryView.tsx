@@ -468,7 +468,7 @@ export default function PaymentHistoryView() {
                 <div
                   key={tx.id}
                   onClick={() => {
-                    if (targetId) router.push(`/paymentDetails/${targetId}`);
+                    if (targetId) router.push(`/paymentDetails/${targetId}?from=/paymentHistory`);
                   }}
                   className="p-3.5 rounded-2xl border gi-border gi-card flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--gi-hover)] active:scale-[0.99] transition shadow-2xs"
                 >
@@ -598,7 +598,11 @@ export default function PaymentHistoryView() {
                     return (
                       <tr
                         key={tx.id}
-                        className="hover:bg-[var(--gi-hover)] transition"
+                        onClick={() => {
+                          const targetId = tx.payment_id || tx.paymentId || tx.id || tx.transaction_number;
+                          if (targetId) router.push(`/paymentDetails/${targetId}?from=/paymentHistory`);
+                        }}
+                        className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
                       >
                         <td className="py-2 px-2 font-semibold gi-text-primary whitespace-nowrap">
                           {dateStr}
@@ -625,7 +629,7 @@ export default function PaymentHistoryView() {
                             <span className="gi-text-muted text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2 max-w-[110px] truncate">
+                        <td className="py-2 px-2 max-w-[110px] truncate" onClick={(e) => e.stopPropagation()}>
                           {linkedInv ? (
                             linkedInv.id ? (
                               <Link
@@ -658,11 +662,24 @@ export default function PaymentHistoryView() {
                         </td>
                         <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetId = tx.payment_id || tx.paymentId || tx.id || tx.transaction_number;
+                                if (targetId) router.push(`/paymentDetails/${targetId}?from=/paymentHistory`);
+                              }}
+                              className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                              title="View Transaction Details"
+                            >
+                              <IoEyeOutline className="text-xs" />
+                            </button>
+
                             {proofImg && (
                               <button
                                 type="button"
                                 onClick={() => setSelectedProofImg(proofImg)}
-                                className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                className="p-1.5 rounded-md gi-badge-success transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
                                 title="View Proof"
                               >
                                 <IoEyeOutline className="text-xs" />

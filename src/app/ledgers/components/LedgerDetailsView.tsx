@@ -1067,7 +1067,7 @@ export default function LedgerDetailsView() {
                     onClick={() => {
                       const targetId = tx.payment_id || tx.paymentId || tx.id;
                       if (targetId) {
-                        router.push(`/paymentDetails/${targetId}`);
+                        router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
                       }
                     }}
                     className="p-3.5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400/50 active:scale-[0.99] transition"
@@ -1224,7 +1224,11 @@ export default function LedgerDetailsView() {
                       return (
                         <tr
                           key={tx.id}
-                          className="hover:bg-[var(--gi-hover)] transition"
+                          onClick={() => {
+                            const targetId = tx.payment_id || tx.paymentId || tx.id;
+                            if (targetId) router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
+                          }}
+                          className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
                         >
                           <td className="py-2 px-2.5 font-semibold gi-text-primary whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
@@ -1251,7 +1255,7 @@ export default function LedgerDetailsView() {
                           <td className="py-2 px-2.5">
                             {getTxTypeBadge(tx.type || tx.transactionType)}
                           </td>
-                          <td className="py-2 px-2.5">
+                          <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                             {linkedInv ? (
                               linkedInv.id ? (
                                 <Link
@@ -1275,6 +1279,19 @@ export default function LedgerDetailsView() {
                           </td>
                           <td className="py-2 px-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const targetId = tx.payment_id || tx.paymentId || tx.id;
+                                  if (targetId) router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
+                                }}
+                                className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                title="View Details"
+                              >
+                                <IoEyeOutline className="text-xs" />
+                              </button>
+
                               {hasPermission("Ledger", "Edit") && (
                                 <button
                                   type="button"

@@ -53,6 +53,7 @@ export default function HomeContent({
 
   const [graphPeriod, setGraphPeriod] = useState("monthly");
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const addMenuRef = useRef(null);
 
   useEffect(() => {
@@ -236,45 +237,66 @@ export default function HomeContent({
           </h1>
         </div>
 
-        {hasPermission("Invoice", "Create") && (
-          <div className="relative shrink-0" ref={addMenuRef}>
-            <button
-              type="button"
-              onClick={() => setShowAddMenu(!showAddMenu)}
-              className="px-3 py-1.5 rounded-lg gi-btn-primary text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs whitespace-nowrap"
-            >
-              <IoAdd className="text-base" />
-              <span>Create Invoice</span>
-            </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {hasPermission("Invoice", "Create") && (
+            <div className="relative shrink-0" ref={addMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="px-3 py-1.5 rounded-lg gi-btn-primary text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 shadow-xs whitespace-nowrap"
+              >
+                <IoAdd className="text-base" />
+                <span>Create Invoice</span>
+              </button>
 
-            {showAddMenu && (
-              <div className="absolute right-0 top-full mt-2 z-50 w-56 sm:w-60 rounded-xl gi-card shadow-2xl p-2 space-y-1 border gi-divider">
-                <Link href="/addInvoice/sales" onClick={() => setShowAddMenu(false)}>
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
-                    <div className="h-7 w-7 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                      <IoDocumentTextOutline className="text-base" />
+              {showAddMenu && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-56 sm:w-60 rounded-xl gi-card shadow-2xl p-2 space-y-1 border gi-divider">
+                  <Link href="/addInvoice/sales" onClick={() => setShowAddMenu(false)}>
+                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
+                      <div className="h-7 w-7 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                        <IoDocumentTextOutline className="text-base" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold">Sales Invoice</span>
+                        <span className="text-[10px] gi-text-muted font-normal truncate">Customer bill &amp; sales receipt</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-bold">Sales Invoice</span>
-                      <span className="text-[10px] gi-text-muted font-normal truncate">Customer bill &amp; sales receipt</span>
+                  </Link>
+                  <Link href="/addInvoice/purchase" onClick={() => setShowAddMenu(false)}>
+                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
+                      <div className="h-7 w-7 rounded-md bg-purple-600 text-white flex items-center justify-center shrink-0">
+                        <IoReceiptOutline className="text-base" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold">Purchase Invoice</span>
+                        <span className="text-[10px] gi-text-muted font-normal truncate">Vendor bill &amp; stock entry</span>
+                      </div>
                     </div>
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Top Navigation 3-Column Grid Menu (Mobile Only: md:hidden) */}
+      <div className="block md:hidden">
+        <div className="grid grid-cols-3 gap-2.5">
+          {quickNavItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.name} href={item.href}>
+                <div className="flex flex-col items-center justify-center text-center p-3 rounded-2xl gi-surface-secondary border gi-border hover:bg-[var(--gi-hover)] transition cursor-pointer space-y-2 shadow-2xs active:scale-[0.98]">
+                  <div className={`h-10 w-10 rounded-xl ${item.bgClass} ${item.colorClass} flex items-center justify-center text-xl shadow-xs shrink-0`}>
+                    <Icon />
                   </div>
-                </Link>
-                <Link href="/addInvoice/purchase" onClick={() => setShowAddMenu(false)}>
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
-                    <div className="h-7 w-7 rounded-md bg-purple-600 text-white flex items-center justify-center shrink-0">
-                      <IoReceiptOutline className="text-base" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-bold">Purchase Invoice</span>
-                      <span className="text-[10px] gi-text-muted font-normal truncate">Vendor bill &amp; stock entry</span>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
+                  <span className="text-xs font-bold gi-text-primary truncate w-full">{item.name}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* TWO VERTICAL PARTS ON DESKTOP: Left Side (Calculations + Recent Transactions) & Right Side (Graph) */}
@@ -304,7 +326,7 @@ export default function HomeContent({
           {/* Calculation Card (Matching User Uploaded Image) */}
           <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4">
             <div>
-              <h2 className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400">
+              <h2 className="text-xs sm:text-lg font-medium text-slate-500 dark:text-zinc-400">
                 Total Balance
               </h2>
               <p className="text-2xl sm:text-3xl font-bold tracking-tight gi-text-primary mt-1 font-mono">
@@ -319,14 +341,13 @@ export default function HomeContent({
                 className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 transition cursor-pointer hover:shadow-xs group"
               >
                 <div className="flex items-center justify-between gap-1">
-                  <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white font-mono truncate">
+                  <p className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white font-mono truncate">
                     ₹{Number(toCollect || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </p>
                   <IoChevronForward className="text-emerald-600 dark:text-emerald-400 text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <p className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-1.5">
+                <p className="text-[11px] sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-1.5">
                   <span>To collect</span>
-                  <span className="text-xs">↓</span>
                 </p>
               </div>
 
@@ -336,14 +357,13 @@ export default function HomeContent({
                 className="p-3.5 sm:p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 transition cursor-pointer hover:shadow-xs group"
               >
                 <div className="flex items-center justify-between gap-1">
-                  <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white font-mono truncate">
+                  <p className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white font-mono truncate">
                     ₹{Number(toPay || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </p>
                   <IoChevronForward className="text-rose-600 dark:text-rose-400 text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <p className="text-[11px] sm:text-xs text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1 mt-1.5">
+                <p className="text-[11px] sm:text-sm text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1 mt-1.5">
                   <span>To Pay</span>
-                  <span className="text-xs">↑</span>
                 </p>
               </div>
             </div>
@@ -404,7 +424,14 @@ export default function HomeContent({
                         return (
                           <tr
                             key={`pay-${tx.id}`}
-                            className="hover:bg-[var(--gi-hover)] transition"
+                            onClick={() => {
+                              if (tx.id) {
+                                router.push(`/paymentDetails/${tx.id}?from=/home`);
+                              } else {
+                                router.push("/paymentHistory");
+                              }
+                            }}
+                            className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
                           >
                             <td className="p-3">
                               <p className="font-bold gi-text-primary">{tx.partyName}</p>
@@ -416,7 +443,7 @@ export default function HomeContent({
                               </span>
                             </td>
                             <td className="p-3 gi-text-secondary whitespace-nowrap">{tx.date}</td>
-                            <td className="p-3">
+                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
                               {targetInvId ? (
                                 <Link
                                   href={`/invoiceDetails/${targetInvId}`}
@@ -456,7 +483,7 @@ export default function HomeContent({
                         key={`pay-mobile-${tx.id}`}
                         onClick={() => {
                           if (tx.id) {
-                            router.push(`/paymentDetails/${tx.id}`);
+                            router.push(`/paymentDetails/${tx.id}?from=/home`);
                           } else {
                             router.push("/paymentHistory");
                           }

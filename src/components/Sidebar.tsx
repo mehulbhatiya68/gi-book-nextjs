@@ -286,22 +286,53 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full gi-sidebar select-none relative z-20">
       {/* ── Brand Logo Section (Top of Sidebar) ── */}
-      <div className={`h-14 px-3.5 flex items-center shrink-0 ${collapsed ? "justify-center" : "justify-start"}`}>
-        <Link href="/home" className="flex items-center gap-2 overflow-hidden py-1">
-          {collapsed ? (
+      <div className={`h-14 px-3 flex items-center shrink-0 border-b border-white/5 ${collapsed ? "justify-center" : "justify-between"}`}>
+        {collapsed ? (
+          /* When collapsed: Logo container transforms into collapse slider toggle button on hover */
+          <button
+            type="button"
+            onClick={() => onToggleCollapse && onToggleCollapse()}
+            className="group/logo relative h-9 w-9 rounded-xl flex items-center justify-center hover:bg-white/10 transition cursor-pointer"
+            title="Click to expand sidebar"
+            aria-label="Expand sidebar"
+          >
+            {/* Logo shown by default */}
             <img
               src="/GiBook_logo_mark_transparent.png"
               alt="GiBook Logo"
-              className="h-8 w-auto object-contain shrink-0"
+              className="h-8 w-8 object-contain transition-all duration-200 group-hover/logo:opacity-0 group-hover/logo:scale-75"
             />
-          ) : (
-            <img
-              src="/logo.png"
-              alt="GiBook Logo"
-              className="h-11 sm:h-12 w-auto object-contain shrink-0 max-w-[175px] py-0.5"
-            />
-          )}
-        </Link>
+            {/* Slider toggle icon shown on hover */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-all duration-200 text-white">
+              <div className="h-7 w-7 rounded-lg bg-blue-600 hover:bg-blue-500 flex items-center justify-center shadow-md">
+                <IoChevronForward className="text-base" />
+              </div>
+            </div>
+          </button>
+        ) : (
+          /* When expanded: Brand logo + Collapse Slider button */
+          <>
+            <Link href="/home" className="flex items-center gap-2 overflow-hidden py-1">
+              <img
+                src="/logo.png"
+                alt="GiBook Logo"
+                className="h-10 sm:h-11 w-auto object-contain shrink-0 max-w-[150px] py-0.5"
+              />
+            </Link>
+
+            {!isMobile && onToggleCollapse && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <IoChevronBack className="text-sm" />
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Navigation Sections */}
