@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "@mobiscroll/react-lite/dist/css/mobiscroll.min.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* ==========================================================================
    GI BOOK GLOBAL ERP THEME & DESIGN TOKENS SYSTEM
@@ -17,9 +22,9 @@
   --border: #E5E7EB;
   --border-strong: #D1D5DB;
   --divider: #EEF0F2;
-  --primary: #4F46E5;
-  --primary-hover: #4338CA;
-  --primary-light: #EEF2FF;
+  --primary: #7f56d9;
+  --primary-hover: #6941C6;
+  --primary-light: #F4EBFF;
   --success: #16A34A;
   --success-bg: #F0FDF4;
   --warning: #D97706;
@@ -32,7 +37,7 @@
   --gi-background: #F6F7F9;
   --gi-surface: #FFFFFF;
   --gi-surface-secondary: #F9FAFB;
-  --gi-sidebar: #FFFFFF;
+  --gi-sidebar: #151C33;
   --gi-topbar: #FFFFFF;
 
   --gi-text: #1F2937;
@@ -44,17 +49,17 @@
   --gi-border-strong: #D1D5DB;
   --gi-divider: #EEF0F2;
 
-  --gi-primary: #4F46E5;
-  --gi-primary-hover: #4338CA;
-  --gi-primary-light: #EEF2FF;
+  --gi-primary: #7f56d9;
+  --gi-primary-hover: #6941C6;
+  --gi-primary-light: #F4EBFF;
 
   --gi-input-background: #FFFFFF;
   --gi-input-border: #D1D5DB;
-  --gi-input-focus: #4F46E5;
+  --gi-input-focus: #7f56d9;
 
   --gi-hover: #F3F4F6;
-  --gi-selected: #EEF2FF;
-  --gi-selected-text: #4F46E5;
+  --gi-selected: #7f56d9;
+  --gi-selected-text: #FFFFFF;
   --gi-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06);
 
   --gi-overlay: rgba(15, 23, 42, 0.35);
@@ -101,20 +106,20 @@
   --gi-border-strong: #484F58;
   --gi-divider: #21262D;
 
-  /* Brand — indigo shifted slightly violet for dark legibility */
-  --gi-primary: #7C6EF8;
-  --gi-primary-hover: #9D8FFA;
-  --gi-primary-light: #1F1D4D;
+  /* Brand — hexcode #7f56d9 */
+  --gi-primary: #7f56d9;
+  --gi-primary-hover: #936FE8;
+  --gi-primary-light: #271A45;
 
   /* Input controls */
   --gi-input-background: #0D1117;
   --gi-input-border: #30363D;
-  --gi-input-focus: #7C6EF8;
+  --gi-input-focus: #7f56d9;
 
   /* Interaction states */
   --gi-hover: #1D2533;
-  --gi-selected: #1F1D4D;
-  --gi-selected-text: #9D8FFA;
+  --gi-selected: #7f56d9;
+  --gi-selected-text: #FFFFFF;
   --gi-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.55);
   --gi-overlay: rgba(0, 0, 0, 0.72);
 
@@ -197,6 +202,7 @@ body {
   background-color: var(--gi-surface) !important;
   border: 1px solid var(--gi-border) !important;
   color: var(--gi-text) !important;
+  border-radius: 1rem !important;
 }
 
 .gi-surface-secondary {
@@ -206,14 +212,14 @@ body {
 }
 
 .gi-sidebar {
-  background-color: var(--gi-sidebar) !important;
-  border-right: 1px solid var(--gi-border) !important;
-  color: var(--gi-text) !important;
+  background-color: #151C33 !important;
+  border-right: none !important;
+  color: #F8FAFC !important;
 }
 
 .gi-topbar {
   background-color: var(--gi-topbar) !important;
-  border-bottom: 1px solid var(--gi-border) !important;
+  border-bottom: none !important;
   color: var(--gi-text) !important;
 }
 
@@ -260,25 +266,6 @@ body {
 
 .gi-btn-danger:hover {
   opacity: 0.85 !important;
-}
-
-/* Filter Pills */
-.gi-filter-active {
-  background-color: var(--gi-selected) !important;
-  color: var(--gi-selected-text) !important;
-  border: 1px solid var(--gi-primary) !important;
-  font-weight: 600 !important;
-  opacity: 1;
-}
-
-.gi-filter-inactive {
-  background-color: transparent !important;
-  color: var(--gi-text-secondary) !important;
-}
-
-.gi-filter-inactive:hover {
-  background-color: var(--gi-hover) !important;
-  color: var(--gi-text) !important;
 }
 
 /* ================================================================
@@ -430,6 +417,13 @@ body {
   }
 }
 
+/* Hide mobile secondary info line under column 1 on desktop screens (>= 768px) */
+@media (min-width: 768px) {
+  .gi-mob-secondary {
+    display: none !important;
+  }
+}
+
 /* Badges */
 .gi-badge-product {
   background-color: #EEF2FF !important;
@@ -543,9 +537,19 @@ select::placeholder {
 
 /* Print mode adjustments */
 @media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
 
   html,
-  body,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+  }
+
   #printable-invoice-area,
   #printable-invoice-area * {
     background: #ffffff !important;
@@ -554,6 +558,10 @@ select::placeholder {
     box-shadow: none !important;
   }
 
+  header,
+  footer,
+  nav,
+  .print\:hidden,
   .no-print {
     display: none !important;
   }
@@ -794,10 +802,82 @@ select::placeholder {
 }
 
 /* ==========================================================================
-   MISSING UTILITY — gi-text-selected-text (referenced in JSX)
+   UNIFIED APP-WIDE FILTER SYSTEM
    ========================================================================== */
+.gi-filter-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background-color: var(--gi-surface-secondary);
+  border: none !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.gi-filter-container.hidden {
+  display: none !important;
+}
+
+.gi-filter-container::-webkit-scrollbar {
+  display: none;
+}
+
+.gi-filter-active {
+  background-color: var(--gi-primary) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  border-radius: 0.5rem !important;
+  padding: 0.375rem 0.875rem !important;
+  box-shadow: 0 1px 3px 0 rgba(79, 70, 229, 0.3) !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.gi-filter-inactive {
+  background-color: transparent !important;
+  color: var(--gi-text-secondary) !important;
+  font-weight: 500 !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+  border-radius: 0.5rem !important;
+  padding: 0.375rem 0.875rem !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.gi-filter-inactive:hover {
+  background-color: var(--gi-hover) !important;
+  color: var(--gi-text-primary) !important;
+}
+
+.gi-sidebar-active {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px 0 rgba(37, 99, 235, 0.4) !important;
+}
+
+.gi-sidebar-active * {
+  color: #FFFFFF !important;
+}
+
 .gi-text-selected-text {
-  color: var(--gi-selected-text) !important;
+  color: #FFFFFF !important;
 }
 
 /* ==========================================================================
@@ -931,12 +1011,6 @@ select::placeholder {
     gap: 0.75rem !important;
   }
 
-  /* ── 6. Dashboard graph container: Hide graph card specifically on mobile portrait screens (< 640px) ── */
-  @media (max-width: 639px) {
-    .grid.grid-cols-1.lg\:grid-cols-3 > .lg\:col-span-2.p-5.rounded-xl.gi-card:first-child {
-      display: none !important;
-    }
-  }
 
   .gi-graph-container {
     height: 240px !important;
@@ -1019,5 +1093,191 @@ select::placeholder {
 @media (max-height: 600px) {
   .gi-sidebar {
     height: 100% !important;
+  }
+}
+
+/* Mobiscroll DatePicker Popover Styling — No dark backdrop overlay or blur */
+.mbsc-popup-overlay,
+.mbsc-popup-overlay-active {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+}
+
+.mbsc-custom-anchored-popup .mbsc-popup-wrapper {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ==========================================================================
+   GLOBAL BACK BUTTON — gi-back-btn
+   Bigger pill, text hidden on mobile (icon-only on small screens)
+   ========================================================================== */
+.gi-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--gi-border, #E5E7EB);
+  background: var(--gi-surface, #fff);
+  color: var(--gi-text, #1F2937);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.06);
+  white-space: nowrap;
+  shrink: 0;
+  user-select: none;
+}
+.gi-back-btn:hover {
+  background: var(--gi-surface-secondary, #F9FAFB);
+  color: var(--gi-primary, #7f56d9);
+}
+.gi-back-btn:active {
+  transform: scale(0.95);
+}
+.gi-back-btn svg {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.gi-back-btn:hover svg {
+  transform: translateX(-2px);
+}
+/* Hide text label on mobile — icon only */
+@media (max-width: 639px) {
+  .gi-back-btn .gi-back-label {
+    display: none;
+  }
+  .gi-back-btn {
+    padding: 0.45rem 0.6rem;
   }
 }
