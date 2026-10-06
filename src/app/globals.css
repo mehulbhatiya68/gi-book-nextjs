@@ -156,7 +156,6 @@ body {
   overflow-x: hidden !important;
   width: 100% !important;
   max-width: 100vw !important;
-  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* 4. REUSABLE SYSTEM CLASSES */

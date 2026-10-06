@@ -3,7 +3,7 @@ interface CacheEntry {
   timestamp: number;
 }
 
-const DEFAULT_TTL_MS = 10000; // 10 seconds default cache TTL
+const DEFAULT_TTL_MS = 30000; // 30 seconds default cache TTL
 
 class ApiCache {
   private cacheMap = new Map<string, CacheEntry>();
@@ -34,8 +34,15 @@ class ApiCache {
         "/projects",
         "/ledger-transactions",
         "/permissions",
+        "/hsn-sac-codes",
+        "/dashboard",
+        "/reports",
+        "/business",
+        "/settings",
+        "/subscription",
       ];
-      return listEndpoints.some((ep) => endpoint.startsWith(ep) && !endpoint.includes("/store"));
+      const nonMutating = !endpoint.includes("/store") && !endpoint.includes("/select") && !endpoint.includes("/adjust-stock") && !endpoint.includes("/status");
+      return listEndpoints.some((ep) => endpoint.startsWith(ep)) && nonMutating;
     }
     return false;
   }
@@ -104,16 +111,17 @@ class ApiCache {
   // Automatically invalidate related endpoints when mutations occur
   private invalidateRelated(endpoint: string): void {
     const ep = endpoint.toLowerCase();
-    if (ep.includes("invoice")) this.invalidate(["/invoices", "/transactions", "/payments"]);
+    if (ep.includes("invoice")) this.invalidate(["/invoices", "/transactions", "/payments", "/dashboard", "/reports"]);
     if (ep.includes("part") || ep.includes("ledger")) {
-      this.invalidate(["/parties", "/ledgers", "/ledger-transactions", "/transactions"]);
+      this.invalidate(["/parties", "/ledgers", "/ledger-transactions", "/transactions", "/dashboard", "/reports"]);
     }
-    if (ep.includes("item")) this.invalidate("/items");
+    if (ep.includes("item")) this.invalidate(["/items", "/dashboard", "/reports"]);
     if (ep.includes("payment") || ep.includes("transaction")) {
-      this.invalidate(["/transactions", "/payments", "/invoices", "/ledgers", "/ledger-transactions"]);
+      this.invalidate(["/transactions", "/payments", "/invoices", "/ledgers", "/ledger-transactions", "/dashboard", "/reports"]);
     }
-    if (ep.includes("staff")) this.invalidate("/staff");
-    if (ep.includes("site") || ep.includes("project")) this.invalidate(["/sites", "/projects"]);
+    if (ep.includes("staff")) this.invalidate(["/staff", "/permissions"]);
+    if (ep.includes("site") || ep.includes("project")) this.invalidate(["/sites", "/projects", "/dashboard", "/reports"]);
+    if (ep.includes("business")) this.invalidate(["/business", "/splash"]);
   }
 
   // Clear entire cache (on logout or user switch)

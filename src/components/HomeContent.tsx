@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   IoAdd,
-  IoTrendingUpOutline,
-  IoArrowDownOutline,
-  IoArrowUpOutline,
   IoWalletOutline,
   IoDocumentTextOutline,
   IoPeopleOutline,
@@ -20,12 +17,12 @@ import {
   IoPeopleCircleOutline,
   IoStatsChartOutline,
   IoCashOutline,
-  IoGridOutline,
 } from "react-icons/io5";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { dashboardApi } from "@/lib/api/dashboard";
 import { transactionApi } from "@/lib/api/transaction";
+import { getAuthToken } from "@/lib/api/client";
 
 import { SkeletonStats, SkeletonTable, SkeletonGraph } from "@/components/Skeleton";
 
@@ -86,9 +83,11 @@ export default function HomeContent({
   };
 
   useEffect(() => {
-    if (activeBusiness?.id) {
-      if (!initialPayments?.length && !initialDashboardData) {
+    const token = getAuthToken();
+    if (token || activeBusiness?.id) {
+      if (!payments.length && !dashboardApiResponse && !initialPayments?.length && !initialDashboardData) {
         setIsLoading(true);
+        setIsDashboardApiLoading(true);
       }
 
       transactionApi.getTransactions({ per_page: "all", silentError: true })
@@ -96,11 +95,9 @@ export default function HomeContent({
           const txList = txRes?.body?.transactions || txRes?.body?.data || (Array.isArray(txRes?.body) ? txRes.body : txRes?.transactions || txRes?.data || []);
           setPayments(Array.isArray(txList) ? txList : []);
         })
-        .catch(() => setPayments([]))
+        .catch(() => { })
         .finally(() => setIsLoading(false));
 
-      // Call GET /dashboard API
-      setIsDashboardApiLoading(true);
       const now = new Date();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
       const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -108,14 +105,16 @@ export default function HomeContent({
 
       dashboardApi.getDashboard({ month: currentMonth, compare_month: compareMonth }, { silentError: true })
         .then((dashRes: any) => {
-          setDashboardApiResponse(dashRes);
+          if (dashRes) setDashboardApiResponse(dashRes);
         })
         .catch((dashErr: any) => {
-          setDashboardApiResponse({
-            error: dashErr?.message || "Failed to fetch dashboard API",
-            status: dashErr?.status,
-            data: dashErr?.data,
-          });
+          if (!dashboardApiResponse) {
+            setDashboardApiResponse({
+              error: dashErr?.message || "Failed to fetch dashboard API",
+              status: dashErr?.status,
+              data: dashErr?.data,
+            });
+          }
         })
         .finally(() => setIsDashboardApiLoading(false));
     } else {
@@ -250,15 +249,15 @@ export default function HomeContent({
               </button>
 
               {showAddMenu && (
-                <div className="absolute right-0 top-full mt-2 z-50 w-56 sm:w-60 rounded-xl gi-card shadow-2xl p-2 space-y-1 border gi-divider">
+                <div className="absolute right-0 top-full mt-2 z-50 w-40 sm:w-40 rounded-xl gi-card shadow-2xl p-2 space-y-1 border gi-divider">
                   <Link href="/addInvoice/sales" onClick={() => setShowAddMenu(false)}>
                     <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
                       <div className="h-7 w-7 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0">
                         <IoDocumentTextOutline className="text-base" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="font-bold">Sales Invoice</span>
-                        <span className="text-[10px] gi-text-muted font-normal truncate">Customer bill &amp; sales receipt</span>
+                        <span className="font-bold">Sales</span>
+
                       </div>
                     </div>
                   </Link>
@@ -268,8 +267,8 @@ export default function HomeContent({
                         <IoReceiptOutline className="text-base" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="font-bold">Purchase Invoice</span>
-                        <span className="text-[10px] gi-text-muted font-normal truncate">Vendor bill &amp; stock entry</span>
+                        <span className="font-bold">Purchase</span>
+
                       </div>
                     </div>
                   </Link>
@@ -323,54 +322,59 @@ export default function HomeContent({
 
         {/* LEFT PART (Col Span 6): Calculation Card + Recent Transactions (Placed 2nd on mobile via order-2, 1st on desktop via lg:order-1) */}
         <div className="order-2 lg:order-1 lg:col-span-6 space-y-6">
-          {/* Calculation Card (Matching User Uploaded Image) */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4">
-            <div>
-              <h2 className="text-xs sm:text-lg font-medium text-slate-500 dark:text-zinc-400">
-                Total Balance
-              </h2>
-              <p className="text-2xl sm:text-3xl font-bold tracking-tight gi-text-primary mt-1 font-mono">
-                ₹{Number(totalBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
+          {/* Calculation Card */}
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4 w-full">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-bold gi-text-secondary uppercase tracking-wider">
+                  Total Balance
+                </h2>
+                <p className="text-2xl sm:text-3xl font-extrabold tracking-tight gi-text-primary mt-1 font-mono">
+                  ₹{Number(totalBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0">
+                <IoWalletOutline />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-1">
               {/* Left Green Pill: To collect ↓ */}
               <div
                 onClick={() => router.push("/payments?filter=to_collect")}
-                className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 transition cursor-pointer hover:shadow-xs group"
+                className="p-3.5 sm:p-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 transition-all duration-200 cursor-pointer hover:shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 group"
               >
                 <div className="flex items-center justify-between gap-1">
-                  <p className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white font-mono truncate">
-                    ₹{Number(toCollect || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  <p className="text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider">
+                    To Collect
                   </p>
-                  <IoChevronForward className="text-emerald-600 dark:text-emerald-400 text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  <IoChevronForward className="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <p className="text-[11px] sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-1.5">
-                  <span>To collect</span>
+                <p className="font-extrabold text-base sm:text-lg text-emerald-950 dark:text-emerald-200 font-mono truncate mt-1">
+                  ₹{Number(toCollect || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </p>
               </div>
 
               {/* Right Red Pill: To Pay ↑ */}
               <div
                 onClick={() => router.push("/payments?filter=to_pay")}
-                className="p-3.5 sm:p-4 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 transition cursor-pointer hover:shadow-xs group"
+                className="p-3.5 sm:p-4 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/80 transition-all duration-200 cursor-pointer hover:shadow-xs hover:border-rose-300 dark:hover:border-rose-700 group"
               >
                 <div className="flex items-center justify-between gap-1">
-                  <p className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white font-mono truncate">
-                    ₹{Number(toPay || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  <p className="text-[11px] sm:text-xs text-rose-700 dark:text-rose-400 font-bold uppercase tracking-wider">
+                    To Pay
                   </p>
-                  <IoChevronForward className="text-rose-600 dark:text-rose-400 text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  <IoChevronForward className="text-rose-600 dark:text-rose-400 text-xs sm:text-sm shrink-0 transition-transform group-hover:translate-x-0.5" />
                 </div>
-                <p className="text-[11px] sm:text-sm text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1 mt-1.5">
-                  <span>To Pay</span>
+                <p className="font-extrabold text-base sm:text-lg text-rose-950 dark:text-rose-200 font-mono truncate mt-1">
+                  ₹{Number(toPay || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Recent Transactions (Below Calculation Card on Left Side) */}
-          <div className="p-5 rounded-2xl gi-card shadow-xs space-y-4">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4 w-full">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm sm:text-base font-bold gi-text-primary">
@@ -382,9 +386,10 @@ export default function HomeContent({
               </div>
               <Link
                 href="/paymentHistory"
-                className="text-xs font-semibold gi-text-selected-text hover:underline"
+                className="text-xs font-bold gi-text-selected-text hover:underline inline-flex items-center gap-1"
               >
-                View Full History
+                <span>View History</span>
+                <IoChevronForward className="text-xs" />
               </Link>
             </div>
 

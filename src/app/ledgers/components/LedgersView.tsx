@@ -24,7 +24,6 @@ import { usePreferences } from "@/lib/hooks/usePreferences";
 import { ledgerApi } from "@/lib/api/ledger";
 import { partyApi } from "@/lib/api/party";
 import PermissionGuard from "@/components/PermissionGuard";
-import AddLedgerForm from "./AddLedgerForm";
 import { SkeletonCard, SkeletonBox } from "@/components/Skeleton";
 import { toast } from "react-toastify";
 
@@ -40,8 +39,7 @@ export default function LedgersView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" });
 
-  // Modal states for Edit and Delete
-  const [ledgerToEdit, setLedgerToEdit] = useState<any | null>(null);
+  // Modal state for Delete
   const [ledgerToDelete, setLedgerToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -345,7 +343,7 @@ export default function LedgersView() {
                       </th>
                     );
                   })}
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y gi-divider">
@@ -356,7 +354,7 @@ export default function LedgersView() {
                       <td className="py-3 px-4"><SkeletonBox className="h-5 w-20" /></td>
                       <td className="py-3 px-4"><SkeletonBox className="h-5 w-24 ml-auto" /></td>
                       <td className="py-3 px-4"><SkeletonBox className="h-5 w-24 ml-auto" /></td>
-                      <td className="py-3 px-4"><SkeletonBox className="h-5 w-16 mx-auto" /></td>
+                      <td className="py-3 px-4"><SkeletonBox className="h-5 w-24 ml-auto" /></td>
                     </tr>
                   ))
                 ) : sortedLedgers.length === 0 ? (
@@ -421,8 +419,8 @@ export default function LedgersView() {
                         <td className={`py-3 px-4 text-right font-mono font-bold ${balColor}`}>
                           {signPrefix}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
+                        <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
                             <Link href={`/addLedgerTransaction?ledger_id=${l.id}`}>
                               <button
                                 type="button"
@@ -437,7 +435,11 @@ export default function LedgersView() {
                             {hasPermission("Ledger", "Edit") && (
                               <button
                                 type="button"
-                                onClick={() => setLedgerToEdit(l)}
+                                onClick={() => {
+                                  const tStr = String(l.type || "").toLowerCase().trim();
+                                  const isParty = tStr === "customer" || tStr === "supplier";
+                                  router.push(isParty ? `/addParty?id=${l.id}&from=/ledgers` : `/addLedger?id=${l.id}&from=/ledgers`);
+                                }}
                                 className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
                                 title="Edit Ledger"
                               >
@@ -465,22 +467,6 @@ export default function LedgersView() {
             </table>
           </div>
         </div>
-
-        {/* Edit Ledger Modal */}
-        {ledgerToEdit && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[var(--gi-surface)] rounded-2xl shadow-2xl p-6 border gi-divider max-h-[90vh] overflow-y-auto">
-              <AddLedgerForm
-                ledgerToEdit={ledgerToEdit}
-                onSuccess={() => {
-                  setLedgerToEdit(null);
-                  fetchLedgers();
-                }}
-                onCancel={() => setLedgerToEdit(null)}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Delete Confirmation Modal */}
         {ledgerToDelete && (

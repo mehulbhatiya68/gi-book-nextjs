@@ -26,7 +26,6 @@ import { invoiceApi } from "@/lib/api/invoice";
 import { isPurchaseInvoice, getInvoiceAmounts } from "@/lib/utils/invoiceUtils";
 import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
-import AddLedgerForm from "@/app/ledgers/components/AddLedgerForm";
 import { SkeletonBox, SkeletonCard, SkeletonStats } from "@/components/Skeleton";
 import { toast } from "react-toastify";
 
@@ -56,8 +55,7 @@ export default function PaymentsView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" });
 
-  // Modal states for Edit and Delete
-  const [ledgerToEdit, setLedgerToEdit] = useState<any | null>(null);
+  // Modal state for Delete
   const [ledgerToDelete, setLedgerToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -490,22 +488,6 @@ export default function PaymentsView() {
             </table>
           </div>
         </div>
-
-        {/* Edit Ledger Modal */}
-        {ledgerToEdit && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[var(--gi-surface)] rounded-2xl shadow-2xl p-6 border gi-divider max-h-[90vh] overflow-y-auto">
-              <AddLedgerForm
-                ledgerToEdit={ledgerToEdit}
-                onSuccess={() => {
-                  setLedgerToEdit(null);
-                  fetchPaymentsData();
-                }}
-                onCancel={() => setLedgerToEdit(null)}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Delete Confirmation Modal */}
         {ledgerToDelete && (

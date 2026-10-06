@@ -212,7 +212,7 @@ export function SkeletonHome() {
         {/* Left Column: Calculation Card + Recent Transactions (order-2 on mobile, order-1 on desktop) */}
         <div className="order-2 lg:order-1 lg:col-span-6 space-y-6">
           {/* Calculation Card Skeleton */}
-          <div className="p-5 rounded-3xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4 animate-pulse">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4 animate-pulse">
             <SkeletonBox className="h-4 w-28 rounded" />
             <SkeletonBox className="h-9 w-52 rounded-lg" />
             <div className="grid grid-cols-2 gap-3 pt-1">

@@ -440,7 +440,7 @@ export default function Graph({
   const isCurrentMonthPrimary = primaryYear === currentYear && primaryMonthIdx === currentMonthIdx;
 
   return (
-    <div className="w-full bg-white dark:bg-[#161B22] rounded-3xl p-5 sm:p-6 shadow-xs space-y-6 select-none transition-colors duration-200" suppressHydrationWarning>
+    <div className="w-full bg-white dark:bg-[#161B22] border gi-divider rounded-2xl p-5 sm:p-6 shadow-xs space-y-6 select-none transition-colors duration-200" suppressHydrationWarning>
       {/* Top Header Card */}
       <div className="space-y-3">
         {/* Title, Mode Toggle, Total Amount & Growth Badge */}

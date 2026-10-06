@@ -79,13 +79,15 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const splashData = await authApi.getSplash();
+      const [splashResult, bizResult] = await Promise.allSettled([
+        authApi.getSplash(),
+        businessApi.getBusinesses({ per_page: "all", silentError: true }),
+      ]);
+
+      const splashData = splashResult.status === "fulfilled" ? splashResult.value : null;
       const b = splashData?.body || splashData?.data || splashData;
 
-      let bizListResponse: any = null;
-      try {
-        bizListResponse = await businessApi.getBusinesses({ per_page: "all", silentError: true });
-      } catch (_) {}
+      const bizListResponse = bizResult.status === "fulfilled" ? bizResult.value : null;
 
       const rawBizArray =
         bizListResponse?.body?.data ||

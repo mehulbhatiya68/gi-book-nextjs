@@ -349,18 +349,18 @@ export default function InvoicesView() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 z-50 w-44 rounded-xl gi-card shadow-2xl p-1.5 space-y-0.5 border gi-divider"
+                      className="absolute right-0 top-full mt-2 z-50 w-40 rounded-xl gi-card shadow-2xl p-1.5 space-y-0.5 border gi-divider"
                     >
                       <Link href="/addInvoice/sales" onClick={() => setShowAddMenu(false)}>
                         <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition whitespace-nowrap">
                           <IoDocumentTextOutline className="text-sm text-indigo-500 shrink-0" />
-                          <span>Sales Invoice</span>
+                          <span>Sales</span>
                         </div>
                       </Link>
                       <Link href="/addInvoice/purchase" onClick={() => setShowAddMenu(false)}>
                         <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition whitespace-nowrap">
                           <IoReceiptOutline className="text-sm text-amber-500 shrink-0" />
-                          <span>Purchase Invoice</span>
+                          <span>Purchase</span>
                         </div>
                       </Link>
                     </motion.div>
@@ -493,8 +493,8 @@ export default function InvoicesView() {
 
                   <div className="text-right shrink-0">
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${isPaid
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      : "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
                       }`}>
                       {isPaid ? "Paid" : "Unpaid"}
                     </span>

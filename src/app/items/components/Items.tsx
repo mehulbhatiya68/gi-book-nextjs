@@ -470,14 +470,6 @@ export default function Items() {
                         </td>
                         <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => router.push(`/items/${item.id}`)}
-                              className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] gi-text-secondary transition"
-                              title="View Details"
-                            >
-                              <IoEyeOutline className="text-base" />
-                            </button>
 
                             {hasPermission("Item Transaction", "Update") && (
                               <button

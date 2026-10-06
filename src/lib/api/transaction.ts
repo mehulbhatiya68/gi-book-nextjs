@@ -182,7 +182,28 @@ export const transactionApi = {
         throw err;
       }
     } else {
-      // General list query across ledgers: fetch ledgers first using POST /ledgers to satisfy required `type` & `id` backend schema
+      // General list query: try direct POST /transactions
+      try {
+        const directRes: any = await apiClient('/transactions', {
+          method: 'POST',
+          body: { per_page: 'all', ...bodyParams },
+          ...clientOptions,
+        });
+        if (directRes && (directRes.body !== undefined || directRes.data !== undefined || Array.isArray(directRes))) {
+          const rawDirectList = directRes?.body?.transactions || directRes?.body?.data || (Array.isArray(directRes?.body) ? directRes.body : (Array.isArray(directRes) ? directRes : []));
+          const list = (Array.isArray(rawDirectList) ? rawDirectList : []).map(normalizeTransaction);
+          return {
+            ...directRes,
+            body: {
+              ...(typeof directRes?.body === 'object' && !Array.isArray(directRes?.body) ? directRes.body : {}),
+              transactions: list,
+              data: list,
+            },
+          };
+        }
+      } catch (_) {}
+
+      // Fallback if direct query returns empty or backend requires explicit ledger type & id
       try {
         const ledgersRes: any = await apiClient('/ledgers', { method: 'POST', body: { per_page: 'all' }, ...clientOptions }).catch(() => ({ body: [] }));
         const lList = Array.isArray(ledgersRes?.body)

@@ -734,18 +734,6 @@ export default function LedgerTransactionsView() {
                         </td>
                         <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetId = tx.id || tx.payment_id || tx.paymentId || tx.transaction_number;
-                                if (targetId) router.push(`/paymentDetails/${targetId}?from=/ledgerTransactions`);
-                              }}
-                              className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
-                              title="View Transaction Details"
-                            >
-                              <IoEyeOutline className="text-xs" />
-                            </button>
 
                             {proofImg && (
                               <button
@@ -761,7 +749,15 @@ export default function LedgerTransactionsView() {
                             {hasPermission("Ledger", "Edit") && (
                               <button
                                 type="button"
-                                onClick={() => setTxToEdit(tx)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const tType = String(tx.type || tx.transactionType || "").toLowerCase();
+                                  if (tType === "payment_in" || tType === "payment_out" || tType === "credit" || tType === "debit") {
+                                    router.push(`/payment/receivedPayment?id=${tx.id}&type=${tType === "payment_in" || tType === "credit" ? "credit" : "debit"}`);
+                                  } else {
+                                    router.push(`/addLedgerTransaction?id=${tx.id}`);
+                                  }
+                                }}
                                 className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
                                 title="Edit Transaction"
                               >

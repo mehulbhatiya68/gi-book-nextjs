@@ -171,8 +171,8 @@ export default function StaffView() {
               return (
                 <div
                   key={staff.id}
-                  onClick={() => setSelectedStaffDetail(staff)}
-                  className="p-3 rounded-xl gi-card shadow-xs space-y-2 cursor-pointer hover:border-indigo-500/40 transition"
+                  onClick={() => router.push(`/staffDetails/${staff.id}`)}
+                  className="p-3 rounded-xl gi-card shadow-xs space-y-2 cursor-pointer hover:border-indigo-500/40 transition active:scale-[0.99]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -313,14 +313,6 @@ export default function StaffView() {
                         </td>
                         <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedStaffDetail(staff)}
-                              className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] gi-text-secondary transition"
-                              title="View Profile Details"
-                            >
-                              <IoEyeOutline className="text-base" />
-                            </button>
                             <button
                               type="button"
                               onClick={() => router.push(`/addStaff?id=${staff.id}`)}

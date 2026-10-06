@@ -43,7 +43,8 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isEdit = Boolean(txToEdit?.id);
+  const urlEditId = searchParams?.get("id") || searchParams?.get("edit");
+  const isEdit = Boolean(txToEdit?.id || urlEditId);
 
   const { isLimitReached, used, quota, featureName } = useLimitCheck("transaction", isEdit);
 
@@ -137,6 +138,24 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
         remark: txToEdit.remark || "",
         imageProof: txToEdit.proof_image || txToEdit.imageProof || "",
       }));
+    } else if (urlEditId) {
+      transactionApi.getTransactionById(urlEditId).then((res: any) => {
+        const target = res?.body?.transaction || res?.body?.payment || res?.body?.data || res?.body;
+        if (target && typeof target === "object" && (target.id || target.amount)) {
+          const spId = String(target.project_id || target.site_id || target.siteProjectId || "");
+          setFormData((prev) => ({
+            ...prev,
+            paymentMode: (target.payment_mode || target.paymentMode || "Cash") as any,
+            fromLedgerId: String(target.payment_ledger_id || target.fromLedgerId || prev.fromLedgerId || ""),
+            toLedgerId: String(target.party_ledger_id || target.toLedgerId || prev.toLedgerId || ""),
+            amount: String(target.amount || ""),
+            hasSiteProject: Boolean(spId),
+            siteProjectId: spId,
+            remark: target.remark || "",
+            imageProof: target.proof_image || target.imageProof || "",
+          }));
+        }
+      }).catch(() => {});
     } else if (searchParams) {
       const qFrom = searchParams.get("fromLedgerId") || searchParams.get("payment_ledger_id");
       const qTo = searchParams.get("toLedgerId") || searchParams.get("party_ledger_id");
@@ -168,7 +187,7 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
         }
       }
     }
-  }, [txToEdit, searchParams, ledgers]);
+  }, [txToEdit, urlEditId, searchParams, ledgers]);
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
@@ -293,8 +312,9 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
         payment_mode: formData.paymentMode,
       };
 
-      if (isEdit && txToEdit?.id) {
-        await transactionApi.updateTransaction(txToEdit.id, payload);
+      const targetEditId = txToEdit?.id || urlEditId;
+      if (isEdit && targetEditId) {
+        await transactionApi.updateTransaction(targetEditId, payload);
         toast.success("Transaction updated successfully!");
       } else {
         await transactionApi.storeTransaction(payload);

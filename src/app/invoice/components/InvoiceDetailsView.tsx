@@ -943,17 +943,6 @@ export default function InvoiceDetailsView() {
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setShowTxModal(false);
-                                    router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`);
-                                  }}
-                                  title="View Payment Details"
-                                  className="p-1 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded transition cursor-pointer"
-                                >
-                                  <IoEyeOutline className="text-xs" />
-                                </button>
-                                <button
-                                  type="button"
                                   onClick={() => setPaymentToDelete(ph)}
                                   title="Delete receipt"
                                   className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
@@ -1359,14 +1348,6 @@ export default function InvoiceDetailsView() {
                           <td className="py-2 px-2 text-right" onClick={(e) => e.stopPropagation()}>
                             {!String(ph.id).startsWith("auto-tx-") && (
                               <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => router.push(`/paymentDetails/${ph.id}?from=${encodeURIComponent(pathname)}`)}
-                                  title="View Payment Details"
-                                  className="p-1 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer"
-                                >
-                                  <IoEyeOutline className="text-sm" />
-                                </button>
                                 <button
                                   type="button"
                                   onClick={() => setPaymentToDelete(ph)}

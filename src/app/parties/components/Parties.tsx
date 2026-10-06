@@ -335,7 +335,6 @@ export default function Parties() {
                       </th>
                     );
                   })}
-                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y gi-divider">
@@ -352,17 +351,11 @@ export default function Parties() {
                       <td className="py-3 px-4"><SkeletonBox className="h-4 w-24 rounded-md" /></td>
                       <td className="py-3 px-4"><SkeletonBox className="h-4 w-28 rounded-md" /></td>
                       <td className="py-3 px-4 text-right"><SkeletonBox className="h-4 w-20 ml-auto rounded-md" /></td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <SkeletonBox className="h-7 w-7 rounded-md" />
-                          <SkeletonBox className="h-7 w-7 rounded-md" />
-                        </div>
-                      </td>
                     </tr>
                   ))
                 ) : sortedParties.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center gi-text-muted text-xs">
+                    <td colSpan={5} className="py-12 text-center gi-text-muted text-xs">
                       No parties found matching your criteria.
                     </td>
                   </tr>
@@ -430,16 +423,6 @@ export default function Parties() {
                           <span className="text-[10px] block font-semibold text-slate-400">
                             {balanceLabel}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/parties/${party.id}`)}
-                            className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] gi-text-secondary transition"
-                            title="View Ledger Details"
-                          >
-                            <IoChevronForward className="text-base" />
-                          </button>
                         </td>
                       </tr>
                     );

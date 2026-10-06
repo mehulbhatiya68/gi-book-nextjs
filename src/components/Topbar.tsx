@@ -167,15 +167,9 @@ export default function Topbar({
       allowed: hasPermission("Item Transaction", "Create"),
     },
     {
-      title: "Received Payment",
-      href: "/payment/receivedPayment?type=credit",
+      title: "Record Payment",
+      href: "/payment/receivedPayment",
       icon: IoCardOutline,
-      allowed: hasPermission("Payment", "Create"),
-    },
-    {
-      title: "Payment Out",
-      href: "/payment/receivedPayment?type=debit",
-      icon: IoArrowUpOutline,
       allowed: hasPermission("Payment", "Create"),
     },
     {
@@ -201,12 +195,6 @@ export default function Topbar({
       href: "/addSiteProject",
       icon: IoLocationOutline,
       allowed: hasPermission("Site", "Create") || hasPermission("Project", "Create"),
-    },
-    {
-      title: "Add New Business",
-      href: "/addBusiness",
-      icon: IoBusinessOutline,
-      allowed: !currentUser?.isStaff || currentUser?.role === "Owner",
     },
   ].filter((a) => a.allowed);
 
@@ -268,7 +256,7 @@ export default function Topbar({
                   className="fixed top-14 left-0 right-0 p-3 bg-white dark:bg-zinc-900 shadow-xl border-b gi-divider z-50 flex items-center gap-2"
                 >
                   <div className="flex-1">
-                    <SearchBar placeholder="Search anything..." />
+                    <SearchBar placeholder="Search anything..." autoFocus={true} />
                   </div>
                   <button
                     type="button"
@@ -303,22 +291,26 @@ export default function Topbar({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-11 z-50 w-56 rounded-xl gi-card shadow-2xl p-1.5 space-y-0.5"
+                    className="fixed sm:absolute top-14 sm:top-full right-3 sm:right-0 mt-1 sm:mt-2 z-50 w-64 sm:w-[360px] max-w-[calc(100vw-1.5rem)] rounded-2xl gi-card shadow-2xl p-3 border gi-divider"
                   >
-                    <div className="px-2.5 py-1.5 text-[10px] font-bold gi-text-muted uppercase tracking-wider border-b gi-divider mb-1">
+                    <div className="px-2 py-1 text-[10px] font-bold gi-text-muted uppercase tracking-wider border-b gi-divider mb-2 sm:col-span-3">
                       Quick Actions
                     </div>
-                    {quickActions.map((act) => {
-                      const ActIcon = act.icon;
-                      return (
-                        <Link key={act.title} href={act.href}>
-                          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-[var(--gi-hover)] text-xs font-semibold gi-text-primary cursor-pointer transition">
-                            <ActIcon className="text-base shrink-0 text-blue-600 dark:text-blue-400" />
-                            <span className="truncate">{act.title}</span>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                    <div className="flex flex-col space-y-1 sm:grid sm:grid-cols-3 sm:gap-2 sm:space-y-0">
+                      {quickActions.map((act) => {
+                        const ActIcon = act.icon;
+                        return (
+                          <Link key={act.title} href={act.href} onClick={() => setQuickAddOpen(false)}>
+                            <div className="flex items-center sm:flex-col sm:justify-center text-left sm:text-center gap-2.5 sm:gap-1.5 px-2.5 py-2 sm:py-2.5 sm:px-1 rounded-xl hover:bg-[var(--gi-hover)] gi-surface-secondary/60 border gi-divider text-xs font-medium gi-text-primary cursor-pointer transition active:scale-[0.97] h-full min-h-[44px] sm:min-h-[60px]">
+                              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <ActIcon className="text-base sm:text-lg" />
+                              </div>
+                              <span className="truncate w-full text-[11px] sm:text-xs font-semibold leading-tight gi-text-primary">{act.title}</span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

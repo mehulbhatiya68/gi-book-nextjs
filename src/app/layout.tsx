@@ -23,9 +23,9 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-[#F6F7F9] dark:bg-[#0D1117]`}
     >
-      <body className="min-h-full flex flex-col font-sans antialiased">
+      <body className="min-h-full flex flex-col font-sans antialiased bg-[#F6F7F9] dark:bg-[#0D1117] text-[#1F2937] dark:text-white">
         <AuthProvider>
           <AppLayout>{children}</AppLayout>
         </AuthProvider>

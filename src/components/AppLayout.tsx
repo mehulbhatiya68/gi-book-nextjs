@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, startTransition } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
 
 import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import Topbar from "./Topbar";
@@ -18,9 +17,23 @@ export default function AppLayout({ children }) {
   const pathname = usePathname();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(210);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Lazily initialize layout state to prevent post-mount re-render layout shifts
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true; // Default to desktop on server
+  });
+
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("gi_book_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
+
   const [isMounted, setIsMounted] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -29,14 +42,6 @@ export default function AppLayout({ children }) {
     };
     handleResize();
     window.addEventListener("resize", handleResize);
-
-    const savedCollapsed = localStorage.getItem("gi_book_sidebar_collapsed");
-
-    startTransition(() => {
-      if (savedCollapsed !== null) {
-        setIsCollapsed(savedCollapsed === "true");
-      }
-    });
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -90,7 +95,7 @@ export default function AppLayout({ children }) {
         <Topbar
           onOpenMobileSidebar={handleOpenMobileSidebar}
           sidebarWidth={effectiveSidebarWidth}
-          isDesktop={isMounted && isDesktop}
+          isDesktop={isDesktop}
           isCollapsed={isCollapsed}
           onToggleCollapse={handleToggleCollapse}
         />
@@ -104,18 +109,12 @@ export default function AppLayout({ children }) {
       </div>
       <main
         className="flex-1 pt-14 pb-safe w-full max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:w-full print:block"
-        style={{ paddingLeft: isMounted && isDesktop ? `${effectiveSidebarWidth}px` : undefined }}
+        style={{ paddingLeft: isDesktop ? `${effectiveSidebarWidth}px` : undefined }}
         suppressHydrationWarning
       >
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0.92, y: 3 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          className="w-full max-w-full p-3 sm:p-5 lg:p-8 overflow-x-hidden print:p-0 print:m-0 print:w-full"
-        >
+        <div className="w-full max-w-full p-3 sm:p-5 lg:p-8 overflow-x-hidden print:p-0 print:m-0 print:w-full">
           {children}
-        </motion.div>
+        </div>
       </main>
       <div className="print:hidden">
         <LogoutConfirmModal />
@@ -124,4 +123,3 @@ export default function AppLayout({ children }) {
     </div>
   );
 }
-

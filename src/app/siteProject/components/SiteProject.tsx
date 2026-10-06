@@ -464,15 +464,6 @@ export default function SiteProject() {
                         </td>
                         <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
-                            <Link href={itemUrl}>
-                              <button
-                                type="button"
-                                className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] gi-text-secondary transition cursor-pointer"
-                                title="View Details"
-                              >
-                                <IoEyeOutline className="text-base" />
-                              </button>
-                            </Link>
 
                             {(hasPermission("Site", "Edit") || hasPermission("Project", "Edit")) && (
                               <Link href={editUrl}>

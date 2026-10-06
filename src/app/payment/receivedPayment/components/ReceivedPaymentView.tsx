@@ -533,11 +533,15 @@ function ReceivedPaymentContent() {
     );
   }
 
-  const pageTitle = selectedParty
+  const pageTitle = isEdit
     ? paymentType === "credit"
-      ? "Received Payment"
-      : "Payment Out"
-    : "Record Payment";
+      ? "Edit Received Payment"
+      : "Edit Payment Out"
+    : selectedParty
+      ? paymentType === "credit"
+        ? "Received Payment"
+        : "Payment Out"
+      : "Record Payment";
 
   return (
     <PermissionGuard module="Payment" action="Create">
@@ -1093,10 +1097,14 @@ function ReceivedPaymentContent() {
                 }`}
               >
                 {isSubmitting
-                  ? "Saving..."
-                  : paymentType === "credit"
-                    ? "Record Payment Received"
-                    : "Record Payment Out"}
+                  ? isEdit ? "Updating..." : "Saving..."
+                  : isEdit
+                    ? paymentType === "credit"
+                      ? "Update Payment Received"
+                      : "Update Payment Out"
+                    : paymentType === "credit"
+                      ? "Record Payment Received"
+                      : "Record Payment Out"}
               </button>
             </section>
           </div>

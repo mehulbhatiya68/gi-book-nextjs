@@ -370,16 +370,7 @@ function SidebarContent({
                             }`}
                         >
                           {active && (
-                            <motion.div
-                              layoutId={isMobile ? "sidebar-blue-pill-mobile" : "sidebar-blue-pill-desktop"}
-                              className="absolute inset-0 rounded-lg bg-blue-600 text-white z-0 shadow-md"
-                              transition={{
-                                type: "spring",
-                                stiffness: 350,
-                                damping: 28,
-                                mass: 0.8,
-                              }}
-                            />
+                            <div className="absolute inset-0 rounded-lg bg-blue-600 text-white z-0 shadow-md transition-all duration-150" />
                           )}
 
                           <div className="relative z-10 w-5 h-5 flex items-center justify-center shrink-0">

@@ -18,6 +18,7 @@ import { partyApi } from "@/lib/api/party";
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
+import { SkeletonBox } from "@/components/Skeleton";
 
 export default function AddParty() {
     const router = useRouter();
@@ -26,6 +27,7 @@ export default function AddParty() {
     const [parties, setParties] = useState([]);
 
     const editId = searchParams?.get("id");
+    const fromParam = searchParams?.get("from");
     const isEditMode = Boolean(editId);
 
     const { isLimitReached, used, quota, featureName } = useLimitCheck("party", isEditMode);
@@ -59,24 +61,37 @@ export default function AddParty() {
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
+    const handleBackNav = () => {
+        if (fromParam) {
+            router.push(fromParam);
+        } else if (isEditMode && editId) {
+            router.push(`/parties/${editId}`);
+        } else {
+            router.push("/parties");
+        }
+    };
+
     useEffect(() => {
         if (!isEditMode) {
-            startTransition(() => {
-                setIsLoading(false);
-            });
+            setIsLoading(false);
             return;
         }
 
-        startTransition(async () => {
+        setIsLoading(true);
+        let isMounted = true;
+
+        (async () => {
             try {
                 const res: any = await partyApi.getPartyDetails(editId as string).catch(() => null);
                 const party = res?.body?.party || res?.body?.data || res?.body;
 
                 if (!party) {
-                    router.push("/parties");
+                    if (isMounted) handleBackNav();
                     return;
                 }
                 
+                if (!isMounted) return;
+
                 setPartyName(party.name || party.partyName || "");
                 setPartyType(party.type ? (party.type.toLowerCase() === "supplier" ? "Supplier" : "Customer") : (party.partyType || "Customer"));
                 setPhone(party.contact_number || party.phone || "");
@@ -86,35 +101,61 @@ export default function AddParty() {
                 const obType = String(party.opening_balance_type || party.openingBalanceType || "").toLowerCase();
                 setBalanceType(obType === "credit" || obType === "cr" ? "To Pay" : "To Receive");
 
-                setBillingAddress({
-                    address: party.billing_address?.street || party.billing_address?.address || party.billingAddress?.street || party.billingAddress?.address || "",
-                    state: party.billing_address?.state || party.billingAddress?.state || "",
-                    pinCode: party.billing_address?.pincode || party.billing_address?.pin || party.billingAddress?.pincode || party.billingAddress?.pin || party.billingAddress?.pinCode || "",
-                    city: party.billing_address?.city || party.billingAddress?.city || "",
-                });
+                const bStreet = party.billing_address?.street || party.billing_address?.address || party.billingAddress?.street || party.billingAddress?.address || party.address || "";
+                const bState = party.billing_address?.state || party.billingAddress?.state || "";
+                const bPin = party.billing_address?.pincode || party.billing_address?.pin || party.billingAddress?.pincode || party.billingAddress?.pin || party.billingAddress?.pinCode || "";
+                const bCity = party.billing_address?.city || party.billingAddress?.city || "";
 
-                setShippingAddress({
-                    address: party.shipping_address?.street || party.shipping_address?.address || party.shippingAddress?.street || party.shippingAddress?.address || "",
-                    state: party.shipping_address?.state || party.shippingAddress?.state || "",
-                    pinCode: party.shipping_address?.pincode || party.shipping_address?.pin || party.shippingAddress?.pincode || party.shippingAddress?.pin || party.shippingAddress?.pinCode || "",
-                    city: party.shipping_address?.city || party.shippingAddress?.city || "",
-                });
+                const bObj = { address: bStreet, state: bState, pinCode: bPin, city: bCity };
 
-                setSameAsBilling(party.sameAsBilling ?? true);
-                setIsLoading(false);
+                const sStreet = party.shipping_address?.street || party.shipping_address?.address || party.shippingAddress?.street || party.shippingAddress?.address || "";
+                const sState = party.shipping_address?.state || party.shippingAddress?.state || "";
+                const sPin = party.shipping_address?.pincode || party.shipping_address?.pin || party.shippingAddress?.pincode || party.shippingAddress?.pin || party.shippingAddress?.pinCode || "";
+                const sCity = party.shipping_address?.city || party.shippingAddress?.city || "";
+
+                const sObj = { address: sStreet, state: sState, pinCode: sPin, city: sCity };
+
+                setBillingAddress(bObj);
+                setShippingAddress(sObj);
+
+                const isExplicitSame = party.same_as_billing ?? party.sameAsBilling;
+                if (typeof isExplicitSame === "boolean") {
+                    setSameAsBilling(isExplicitSame);
+                    if (isExplicitSame) {
+                        setShippingAddress(bObj);
+                    }
+                } else {
+                    const hasShipping = Boolean(sStreet || sState || sPin || sCity);
+                    if (!hasShipping) {
+                        setSameAsBilling(true);
+                        setShippingAddress(bObj);
+                    } else {
+                        const isIdentical = sStreet === bStreet && sState === bState && sPin === bPin && sCity === bCity;
+                        setSameAsBilling(isIdentical);
+                    }
+                }
             } catch (error) {
                 console.error(error);
-                router.push("/parties");
+                if (isMounted) handleBackNav();
+            } finally {
+                if (isMounted) setIsLoading(false);
             }
-        });
+        })();
+
+        return () => {
+            isMounted = false;
+        };
     }, [editId, isEditMode, router]);
 
     const handleAddressChange = (type: any, field: any, value: any) => {
         if (type === "billing") {
-            setBillingAddress((prev) => ({
-                ...prev,
-                [field]: value,
-            }));
+            setBillingAddress((prev) => {
+                const next = { ...prev, [field]: value };
+                if (sameAsBilling) {
+                    setShippingAddress(next);
+                }
+                return next;
+            });
         } else {
             setShippingAddress((prev) => ({
                 ...prev,
@@ -136,6 +177,41 @@ export default function AddParty() {
         setErrorMsg("");
 
         try {
+            const bHasData = Boolean(
+                billingAddress.address.trim() ||
+                billingAddress.city.trim() ||
+                billingAddress.state.trim() ||
+                billingAddress.pinCode.trim()
+            );
+
+            const bAddressObj = bHasData
+                ? {
+                    street: billingAddress.address.trim(),
+                    city: billingAddress.city.trim(),
+                    state: billingAddress.state.trim(),
+                    pincode: billingAddress.pinCode.trim(),
+                    pin: billingAddress.pinCode.trim(),
+                }
+                : undefined;
+
+            const targetShipping = sameAsBilling ? billingAddress : shippingAddress;
+            const sHasData = Boolean(
+                targetShipping.address.trim() ||
+                targetShipping.city.trim() ||
+                targetShipping.state.trim() ||
+                targetShipping.pinCode.trim()
+            );
+
+            const sAddressObj = sHasData
+                ? {
+                    street: targetShipping.address.trim(),
+                    city: targetShipping.city.trim(),
+                    state: targetShipping.state.trim(),
+                    pincode: targetShipping.pinCode.trim(),
+                    pin: targetShipping.pinCode.trim(),
+                }
+                : undefined;
+
             const payload: any = {
                 name: partyName.trim(),
                 type: partyType.toLowerCase() === "supplier" ? "supplier" : "customer",
@@ -146,36 +222,25 @@ export default function AddParty() {
                 country_code: 91,
             };
 
-            if (billingAddress.address.trim() || billingAddress.city.trim() || billingAddress.state.trim() || billingAddress.pinCode.trim()) {
-                payload.billing_address = {
-                    street: billingAddress.address.trim(),
-                    city: billingAddress.city.trim(),
-                    state: billingAddress.state.trim(),
-                    pincode: billingAddress.pinCode.trim(),
-                    pin: billingAddress.pinCode.trim(),
-                };
+            if (bAddressObj) {
+                payload.billing_address = bAddressObj;
             }
 
-            const targetShipping = sameAsBilling ? billingAddress : shippingAddress;
-            if (targetShipping.address.trim() || targetShipping.city.trim() || targetShipping.state.trim() || targetShipping.pinCode.trim()) {
-                payload.shipping_address = {
-                    street: targetShipping.address.trim(),
-                    city: targetShipping.city.trim(),
-                    state: targetShipping.state.trim(),
-                    pincode: targetShipping.pinCode.trim(),
-                    pin: targetShipping.pinCode.trim(),
-                };
+            if (sAddressObj) {
+                payload.shipping_address = sAddressObj;
             }
 
             if (isEditMode && editId) {
                 await partyApi.updateParty(editId as string, payload);
                 toast.success("Party details updated successfully!");
-                router.replace(`/parties/${editId}`);
+                handleBackNav();
             } else {
                 const res: any = await partyApi.createParty(payload);
                 const createdId = res?.body?.party?.id || res?.body?.ledger?.id || res?.body?.id;
                 toast.success("Party created successfully!");
-                if (createdId) {
+                if (fromParam) {
+                    router.push(fromParam);
+                } else if (createdId) {
                     router.replace(`/parties/${createdId}`);
                 } else {
                     router.replace("/parties");
@@ -191,11 +256,29 @@ export default function AddParty() {
 
     if (isLoading) {
         return (
-            <div className="min-h-[50vh] flex items-center justify-center gi-page">
-                <div className="gi-card p-6 rounded-xl border gi-divider text-center shadow-xs">
-                    <p className="text-sm gi-text-secondary">
-                        Loading party details...
-                    </p>
+            <div className="max-w-3xl mx-auto space-y-6 pb-12 gi-page select-none">
+                <PageHeader
+                    title={isEditMode ? "Edit Party Profile" : "Add New Party"}
+                    subtitle={isEditMode ? "Update contact & billing details" : "Register a customer or vendor account"}
+                    onBack={handleBackNav}
+                />
+                <div className="gi-card p-6 rounded-xl border gi-divider space-y-6 shadow-xs animate-pulse">
+                    <div className="space-y-2">
+                        <SkeletonBox className="h-4 w-32 rounded-md" />
+                        <SkeletonBox className="h-10 w-full rounded-lg" />
+                    </div>
+                    <div className="space-y-2">
+                        <SkeletonBox className="h-4 w-28 rounded-md" />
+                        <div className="flex gap-2">
+                            <SkeletonBox className="h-10 flex-1 rounded-lg" />
+                            <SkeletonBox className="h-10 flex-1 rounded-lg" />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <SkeletonBox className="h-4 w-36 rounded-md" />
+                        <SkeletonBox className="h-10 w-full rounded-lg" />
+                    </div>
+                    <SkeletonBox className="h-32 w-full rounded-xl" />
                 </div>
             </div>
         );
@@ -218,7 +301,7 @@ export default function AddParty() {
                 <PageHeader
                   title={isEditMode ? "Edit Party Profile" : "Add New Party"}
                   subtitle={isEditMode ? "Update contact & billing details" : "Register a customer or vendor account"}
-                  backUrl={isEditMode ? `/parties/${editId}` : "/parties"}
+                  onBack={handleBackNav}
                 />
 
                 {/* Form Card */}
@@ -327,9 +410,27 @@ export default function AddParty() {
 
                     {/* Address Configuration */}
                     <div className="pt-2 border-t gi-divider space-y-3">
-                        <label className="block text-xs font-semibold gi-text-primary">
-                            Address Configuration
-                        </label>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <label className="block text-xs font-semibold gi-text-primary">
+                                Address Configuration
+                            </label>
+
+                            <label className="inline-flex items-center gap-2 text-xs gi-text-secondary font-medium cursor-pointer select-none hover:gi-text-primary transition">
+                                <input
+                                    type="checkbox"
+                                    checked={sameAsBilling}
+                                    onChange={(e) => {
+                                        const isSame = e.target.checked;
+                                        setSameAsBilling(isSame);
+                                        if (isSame) {
+                                            setShippingAddress({ ...billingAddress });
+                                        }
+                                    }}
+                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition"
+                                />
+                                <span>Shipping address same as billing</span>
+                            </label>
+                        </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button
@@ -355,8 +456,13 @@ export default function AddParty() {
 
                             <button
                                 type="button"
-                                onClick={() => setActiveAddress("shipping")}
-                                className="rounded-xl border gi-divider p-3 text-left transition cursor-pointer bg-[var(--gi-surface)] hover:bg-[var(--gi-hover)]"
+                                onClick={() => {
+                                    if (sameAsBilling) {
+                                        setSameAsBilling(false);
+                                    }
+                                    setActiveAddress("shipping");
+                                }}
+                                className={`rounded-xl border gi-divider p-3 text-left transition cursor-pointer bg-[var(--gi-surface)] hover:bg-[var(--gi-hover)] ${sameAsBilling ? "opacity-85" : ""}`}
                             >
                                 <div className="flex items-center gap-2.5">
                                     <div className="h-8 w-8 rounded-lg gi-badge-info flex items-center justify-center shrink-0">
@@ -364,11 +470,20 @@ export default function AddParty() {
                                     </div>
 
                                     <div className="min-w-0">
-                                        <p className="font-semibold text-xs gi-text-primary">
-                                            Shipping Address
-                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="font-semibold text-xs gi-text-primary">
+                                                Shipping Address
+                                            </p>
+                                            {sameAsBilling && (
+                                                <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded">
+                                                    Same as Billing
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-[11px] gi-text-secondary truncate mt-0.5">
-                                            {shippingAddress.address || "Click to add shipping address..."}
+                                            {sameAsBilling
+                                                ? (billingAddress.address || "Same as billing address...")
+                                                : (shippingAddress.address || "Click to add shipping address...")}
                                         </p>
                                     </div>
                                 </div>
@@ -380,7 +495,7 @@ export default function AddParty() {
                     <div className="flex items-center justify-end gap-3 pt-4 border-t gi-divider">
                         <button
                             type="button"
-                            onClick={() => router.replace(isEditMode ? `/parties/${editId}` : "/parties")}
+                            onClick={handleBackNav}
                             className="px-4 py-2 rounded-lg text-xs font-semibold border gi-surface-interactive gi-text-secondary cursor-pointer"
                         >
                             Cancel

@@ -815,8 +815,9 @@ export default function AddItem() {
                           <button
                             type="button"
                             onClick={handleGenerateBarcode}
-                            className="h-9 sm:h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-xs shrink-0"
-                            title="Generate unique barcode"
+                            disabled={Boolean(itemCode.trim())}
+                            className="h-9 sm:h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100"
+                            title={itemCode.trim() ? "Barcode already generated" : "Generate unique barcode"}
                           >
                             <IoSparklesOutline className="text-sm" />
                             <span>Generate Barcode</span>

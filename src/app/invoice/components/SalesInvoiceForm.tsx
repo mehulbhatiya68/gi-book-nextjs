@@ -13,6 +13,9 @@ import {
   IoAdd,
   IoRemove,
   IoTrashOutline,
+  IoReceiptOutline,
+  IoCubeOutline,
+  IoBriefcaseOutline,
 } from "react-icons/io5";
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
@@ -398,16 +401,25 @@ export default function SalesInvoiceForm() {
   };
 
   const getItemGst = (item: any) => {
-    if (!item) return "None";
-    if (item.gst && item.gst !== "None") return item.gst;
-    if (item.tax_rate) return `GST @ ${item.tax_rate}%`;
-    return "None";
+    if (!item) return "GST Exempt (0%)";
+    const rawRate = item.gstRate ?? item.gst_rate ?? item.tax_rate ?? item.taxRate ?? item.tax_percent;
+    let rate = 0;
+    if (rawRate !== undefined && rawRate !== null) {
+      rate = Number(rawRate);
+    } else if (item.gst) {
+      rate = parseGstRate(item.gst);
+    }
+    if (rate > 0) return `GST @ ${rate}%`;
+    if (item.gst && String(item.gst).toLowerCase() !== "none" && String(item.gst).toLowerCase() !== "0") {
+      return item.gst;
+    }
+    return "GST Exempt (0%)";
   };
 
   const getItemSalesTaxType = (item: any) => {
     if (!item) return "Without Tax";
-    const tt = item.salesTaxType || item.sales_price_tax_type || item.taxType;
-    if (tt === "with_tax" || tt === "With Tax") return "With Tax";
+    const tt = item.salesTaxType || item.sales_price_tax_type || item.taxType || item.tax_type;
+    if (tt === "with_tax" || tt === "With Tax" || tt === "inclusive") return "With Tax";
     return "Without Tax";
   };
 
@@ -1869,10 +1881,13 @@ export default function SalesInvoiceForm() {
                   const hsn = getItemHsn(item);
                   const price = getItemSalesPrice(item);
                   const stockQty = getItemStock(item);
+                  const minStockAlert = Number(item.min_stock_alert ?? item.minStockAlert ?? item.lowStockAt ?? 0);
                   const isService = getItemType(item) === "Service";
                   const purchasePrice = getItemPurchasePrice(item);
-                  const isOutOfStock = !isService && purchasePrice > 0 && stockQty <= 0;
-                  const gst = getItemGst(item);
+                  const isOutOfStock = !isService && stockQty <= 0;
+                  const isLowStock = !isService && !isOutOfStock && minStockAlert > 0 && stockQty <= minStockAlert;
+                  const gstText = getItemGst(item);
+                  const taxType = getItemSalesTaxType(item);
                   const unit = item.unit || "unit";
 
                   return (
@@ -1883,36 +1898,69 @@ export default function SalesInvoiceForm() {
                           handleToggleItem(item);
                         }
                       }}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition cursor-pointer text-left ${isSelected
-                        ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500"
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition cursor-pointer text-left ${isSelected
+                        ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 shadow-xs"
                         : isOutOfStock
-                          ? "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40"
+                          ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40"
                           : "bg-slate-50/50 dark:bg-zinc-800/40 border-slate-200 dark:border-zinc-800 hover:border-indigo-500"
                         }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{name}</p>
-                          {gst && gst !== "None" && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
-                              {gst}
+                      <div className="min-w-0 pr-3 flex-1 space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate max-w-[240px] sm:max-w-[320px]">
+                            {name}
+                          </p>
+                          
+                          {/* GST Tax Rate Badge */}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+                            gstText.includes("Exempt") || gstText === "None"
+                              ? "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700"
+                              : "bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                          }`}>
+                            <IoReceiptOutline className="text-xs shrink-0" />
+                            <span>{gstText}</span>
+                            <span className="opacity-75 font-normal">({taxType})</span>
+                          </span>
+                        </div>
+
+                        {/* Details line: Stock, HSN */}
+                        <div className="flex items-center gap-2 text-xs flex-wrap">
+                          {/* Stock Details Badge */}
+                          {isService ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-900/50">
+                              <IoBriefcaseOutline className="text-xs shrink-0" />
+                              <span>Service</span>
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border ${
+                              isOutOfStock
+                                ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                                : isLowStock
+                                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                  : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                            }`}>
+                              <IoCubeOutline className="text-xs shrink-0" />
+                              <span>
+                                {isOutOfStock ? `Out of Stock (0 ${unit})` : `Stock: ${stockQty} ${unit}`}
+                              </span>
+                            </span>
+                          )}
+
+                          {hsn && (
+                            <span className="text-[11px] font-mono gi-text-secondary bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700">
+                              HSN: {hsn}
                             </span>
                           )}
                         </div>
-                        <p className={`text-[11px] mt-0.5 ${isOutOfStock ? "text-red-500 font-medium" : "text-slate-500 dark:text-zinc-400"}`}>
-                          {isService
-                            ? "Service"
-                            : isOutOfStock
-                              ? `Out of Stock (${stockQty} ${unit})`
-                              : `Stock: ${stockQty} ${unit}`}
-                          {hsn ? ` • HSN: ${hsn}` : ""}
-                        </p>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <p className="font-bold text-xs text-slate-900 dark:text-white">
-                          ₹{price.toFixed(2)}
-                        </p>
+                        <div className="text-right">
+                          <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                            ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-[10px] gi-text-muted">per {unit}</p>
+                        </div>
 
                         {isSelected ? (
                           <QuantityStepper
@@ -1931,8 +1979,8 @@ export default function SalesInvoiceForm() {
                               e.stopPropagation();
                               if (!isOutOfStock) handleToggleItem(item);
                             }}
-                            className={`text-[10px] uppercase font-bold px-2.5 py-1.5 rounded-lg transition cursor-pointer ${isOutOfStock
-                              ? "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 cursor-not-allowed"
+                            className={`text-[10px] uppercase font-bold px-3 py-2 rounded-xl transition cursor-pointer ${isOutOfStock
+                              ? "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 cursor-not-allowed border border-red-200 dark:border-red-900/50"
                               : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-xs"
                               }`}
                           >
@@ -2007,22 +2055,20 @@ export default function SalesInvoiceForm() {
               <button
                 type="button"
                 onClick={() => setNewItemType("product")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
-                  newItemType === "product"
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${newItemType === "product"
                     ? "bg-indigo-600 text-white shadow-sm font-extrabold"
                     : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 Product
               </button>
               <button
                 type="button"
                 onClick={() => setNewItemType("service")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${
-                  newItemType === "service"
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer ${newItemType === "service"
                     ? "bg-indigo-600 text-white shadow-sm font-extrabold"
                     : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 Service
               </button>

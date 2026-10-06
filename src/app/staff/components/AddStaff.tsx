@@ -48,13 +48,13 @@ export default function AddStaff() {
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPermissions, setShowPermissions] = useState(true);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     mobile: "",
     password: "",
-    allowAccess: true,
   });
 
   // Fetch catalog permissions on mount (GET /permissions)
@@ -88,7 +88,6 @@ export default function AddStaff() {
               email: staff.email || "",
               mobile: staff.mobile_number || staff.mobile || "",
               password: "",
-              allowAccess: staff.status ? staff.status === "active" : true,
             });
 
             // Extract existing permission IDs from staff object
@@ -124,13 +123,6 @@ export default function AddStaff() {
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const toggleAccess = () => {
-    setFormData((prev) => ({
-      ...prev,
-      allowAccess: !prev.allowAccess,
     }));
   };
 
@@ -191,8 +183,8 @@ export default function AddStaff() {
           email: formData.email.trim(),
           mobile_number: formData.mobile.trim() || undefined,
           country_code: 91,
-          status: formData.allowAccess ? "active" : "inactive",
-          permission_ids: selectedPermissionIds,
+          status: "active",
+          permission_ids: showPermissions ? selectedPermissionIds : [],
         };
 
         if (formData.password.trim()) {
@@ -209,7 +201,7 @@ export default function AddStaff() {
           password: formData.password.trim() || "password123",
           mobile_number: formData.mobile.trim() || undefined,
           country_code: 91,
-          permission_ids: selectedPermissionIds,
+          permission_ids: showPermissions ? selectedPermissionIds : [],
         };
 
         await staffApi.createStaff(storePayload);
@@ -237,7 +229,7 @@ export default function AddStaff() {
 
   return (
     <PermissionGuard module="Staff" action={isEditing ? "Update" : "Create"}>
-      <div className="space-y-3 pb-12 select-none gi-page">
+      <div className="space-y-3 pb-24 lg:pb-12 select-none gi-page">
         {/* Compact Top Header */}
         <div className="flex items-center justify-between gap-3 py-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -257,7 +249,7 @@ export default function AddStaff() {
 
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Staff Credentials */}
+            {/* Left Column: Staff Credentials & Desktop Save Action */}
             <div className="lg:col-span-5 space-y-6">
               <section className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-5 sm:p-6 shadow-xs space-y-4">
                 <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200 dark:border-zinc-800">
@@ -360,162 +352,190 @@ export default function AddStaff() {
                   )}
                 </div>
 
-                {isEditing && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-zinc-800">
-                    <div
-                      onClick={toggleAccess}
-                      className="w-full flex items-center justify-between gap-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 text-left transition cursor-pointer select-none"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                            formData.allowAccess
-                              ? "bg-indigo-600 text-white"
-                              : "bg-slate-200 dark:bg-zinc-700 text-slate-500"
-                          }`}
-                        >
-                          <IoShieldCheckmarkOutline className="text-base" />
-                        </div>
-
-                        <div>
-                          <p className="font-semibold text-xs text-slate-900 dark:text-white">
-                            Active Account Status
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                            Controls login & system access status
-                          </p>
-                        </div>
+                {/* Permissions Toggle (Show & Hide Permissions Matrix) */}
+                <div className="pt-3 border-t border-slate-200 dark:border-zinc-800">
+                  <div
+                    onClick={() => setShowPermissions((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 text-left transition cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${
+                          showPermissions
+                            ? "bg-indigo-600 text-white"
+                            : "bg-slate-200 dark:bg-zinc-700 text-slate-500"
+                        }`}
+                      >
+                        <IoShieldCheckmarkOutline className="text-base" />
                       </div>
 
+                      <div>
+                        <p className="font-semibold text-xs text-slate-900 dark:text-white">
+                          Permissions
+                        </p>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                          {showPermissions ? "Hide module permissions" : "Show module permissions"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pointer-events-none">
                       <ToggleSwitch
-                        checked={formData.allowAccess}
-                        onChange={(val) => setFormData((prev) => ({ ...prev, allowAccess: val }))}
+                        checked={showPermissions}
+                        onChange={() => {}}
                         size="sm"
-                        ariaLabel="Active account status toggle"
+                        ariaLabel="Toggle permissions matrix visibility"
                       />
                     </div>
                   </div>
-                )}
-              </section>
-            </div>
-
-            {/* Right Column: Permission Catalog Matrix */}
-            <div className="lg:col-span-7">
-              <section className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-zinc-800">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                      <IoShieldCheckmarkOutline className="text-lg" />
-                    </div>
-
-                    <div>
-                      <h2 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Module Access Matrix
-                      </h2>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400">
-                        Assign module permissions from permission catalog
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={selectAllPermissions}
-                      className="h-7 px-2.5 rounded border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-[11px] font-semibold cursor-pointer"
-                    >
-                      Select All
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={clearAllPermissions}
-                      className="h-7 px-2.5 rounded border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-[11px] font-semibold cursor-pointer"
-                    >
-                      Clear All
-                    </button>
-                  </div>
                 </div>
-
-                {isLoadingPermissions ? (
-                  <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
-                    Loading permission catalog...
-                  </div>
-                ) : Object.keys(catalogPermissions).length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    No permissions available in catalog.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {Object.entries(catalogPermissions).map(([moduleKey, items]) => {
-                      const moduleName = formatModuleName(moduleKey);
-                      const moduleIds = items.map((i) => i.id);
-                      const allSelected = moduleIds.every((id) =>
-                        selectedPermissionIds.includes(id)
-                      );
-
-                      return (
-                        <div
-                          key={moduleKey}
-                          className="rounded-lg bg-slate-50/50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-800 p-3"
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <h3 className="font-semibold text-xs text-slate-900 dark:text-white">
-                              {moduleName}
-                            </h3>
-
-                            <button
-                              type="button"
-                              onClick={() => toggleEntireModule(items)}
-                              className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                            >
-                              {allSelected ? "Clear" : "All"}
-                            </button>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5">
-                            {items.map((item) => {
-                              const active = selectedPermissionIds.includes(item.id);
-
-                              return (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => togglePermissionId(item.id)}
-                                  className={`h-7 px-2.5 rounded text-[11px] font-medium transition flex items-center gap-1 cursor-pointer ${
-                                    active
-                                      ? "bg-indigo-600 text-white shadow-xs"
-                                      : "bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:border-indigo-500"
-                                  }`}
-                                >
-                                  {active && <IoCheckmark className="text-xs" />}
-                                  <span className="capitalize">{item.name}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </section>
+
+              {/* Desktop Save Action (Placed directly below Profile Credentials) */}
+              <div className="hidden lg:flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.replace("/staff")}
+                  className="h-10 px-5 rounded-xl bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 h-10 px-6 rounded-xl gi-btn-primary disabled:opacity-50 transition text-xs sm:text-sm font-bold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <IoCheckmark className="text-lg" />
+                  <span>
+                    {isSubmitting
+                      ? "Saving..."
+                      : isEditing
+                      ? "Update Staff Member"
+                      : "Save Staff Member"}
+                  </span>
+                </button>
+              </div>
             </div>
+
+            {/* Right Column: Permission Catalog Matrix (Controlled by showPermissions Toggle) */}
+            {showPermissions && (
+              <div className="lg:col-span-7">
+                <section className="rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <IoShieldCheckmarkOutline className="text-lg" />
+                      </div>
+
+                      <div>
+                        <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+                          Module Access Matrix
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">
+                          Assign module permissions from permission catalog
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllPermissions}
+                        className="h-7 px-2.5 rounded border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-[11px] font-semibold cursor-pointer"
+                      >
+                        Select All
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={clearAllPermissions}
+                        className="h-7 px-2.5 rounded border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-[11px] font-semibold cursor-pointer"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  {isLoadingPermissions ? (
+                    <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
+                      Loading permission catalog...
+                    </div>
+                  ) : Object.keys(catalogPermissions).length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      No permissions available in catalog.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(catalogPermissions).map(([moduleKey, items]) => {
+                        const moduleName = formatModuleName(moduleKey);
+                        const moduleIds = items.map((i) => i.id);
+                        const allSelected = moduleIds.every((id) =>
+                          selectedPermissionIds.includes(id)
+                        );
+
+                        return (
+                          <div
+                            key={moduleKey}
+                            className="rounded-lg bg-slate-50/50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-800 p-3"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <h3 className="font-semibold text-xs text-slate-900 dark:text-white">
+                                {moduleName}
+                              </h3>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleEntireModule(items)}
+                                className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                              >
+                                {allSelected ? "Clear" : "All"}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5">
+                              {items.map((item) => {
+                                const active = selectedPermissionIds.includes(item.id);
+
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => togglePermissionId(item.id)}
+                                    className={`h-7 px-2.5 rounded text-[11px] font-medium transition flex items-center gap-1 cursor-pointer ${
+                                      active
+                                        ? "bg-indigo-600 text-white shadow-xs"
+                                        : "bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:border-indigo-500"
+                                    }`}
+                                  >
+                                    {active && <IoCheckmark className="text-xs" />}
+                                    <span className="capitalize">{item.name}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
 
-          {/* Bottom Action Footer for Mobile screens (Single Save Staff button at last of page) */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-zinc-800">
+          {/* Static Bottom Action Bar for Mobile Screens (Fixed at bottom with high z-index z-50) */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-white/95 dark:bg-[#161B22]/95 backdrop-blur-md border-t border-slate-200 dark:border-zinc-800 shadow-2xl flex items-center gap-2.5 lg:hidden">
             <button
               type="button"
               onClick={() => router.replace("/staff")}
-              className="h-10 px-5 rounded-xl bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-xs font-semibold cursor-pointer"
+              className="h-10 px-4 rounded-xl bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition text-xs font-semibold cursor-pointer shrink-0"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto h-10 px-6 rounded-xl gi-btn-primary disabled:opacity-50 transition text-xs sm:text-sm font-bold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 h-10 px-5 rounded-xl gi-btn-primary disabled:opacity-50 transition text-xs font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <IoCheckmark className="text-lg" />
               <span>

@@ -17,7 +17,6 @@ import {
   IoReceiptOutline,
   IoPrintOutline,
   IoLocationOutline,
-  IoEyeOutline,
   IoClose,
   IoArrowUpOutline,
   IoArrowDownOutline,
@@ -81,7 +80,6 @@ export default function LedgerDetailsView() {
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: "date", direction: "desc" });
 
   // Modals
-  const [isEditLedgerOpen, setIsEditLedgerOpen] = useState(false);
   const [isDeleteLedgerOpen, setIsDeleteLedgerOpen] = useState(false);
   const [isDeletingLedger, setIsDeletingLedger] = useState(false);
 
@@ -836,7 +834,10 @@ export default function LedgerDetailsView() {
                 {hasPermission("Ledger", "Edit") && (
                   <button
                     type="button"
-                    onClick={() => setIsEditLedgerOpen(true)}
+                    onClick={() => {
+                      const isParty = ["customer", "supplier"].includes(ledgerType);
+                      router.push(isParty ? `/addParty?id=${ledger.id}&from=${pathname}` : `/addLedger?id=${ledger.id}&from=${pathname}`);
+                    }}
                     className="px-3 py-2 rounded-xl border gi-border gi-surface-interactive gi-text-primary text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                     title="Edit Ledger"
                   >
@@ -942,7 +943,10 @@ export default function LedgerDetailsView() {
             {hasPermission("Ledger", "Edit") && (
               <button
                 type="button"
-                onClick={() => setIsEditLedgerOpen(true)}
+                onClick={() => {
+                  const isParty = ["customer", "supplier"].includes(ledgerType);
+                  router.push(isParty ? `/addParty?id=${ledger.id}&from=${pathname}` : `/addLedger?id=${ledger.id}&from=${pathname}`);
+                }}
                 className="p-2 rounded-full text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
                 title="Edit Ledger"
               >
@@ -1279,18 +1283,6 @@ export default function LedgerDetailsView() {
                           </td>
                           <td className="py-2 px-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const targetId = tx.payment_id || tx.paymentId || tx.id;
-                                  if (targetId) router.push(`/paymentDetails/${targetId}?from=${encodeURIComponent(pathname)}`);
-                                }}
-                                className="p-1.5 rounded-md gi-badge-info transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
-                                title="View Details"
-                              >
-                                <IoEyeOutline className="text-xs" />
-                              </button>
 
                               {hasPermission("Ledger", "Edit") && (
                                 <button
@@ -1380,21 +1372,7 @@ export default function LedgerDetailsView() {
         </div>
 
         {/* Modals */}
-        {/* Edit Ledger Modal */}
-        {isEditLedgerOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="relative w-full max-w-2xl bg-[var(--gi-surface)] rounded-2xl shadow-2xl p-6 border gi-divider max-h-[90vh] overflow-y-auto">
-              <AddLedgerForm
-                ledgerToEdit={ledger}
-                onSuccess={() => {
-                  setIsEditLedgerOpen(false);
-                  fetchLedgerAndTransactions();
-                }}
-                onCancel={() => setIsEditLedgerOpen(false)}
-              />
-            </div>
-          </div>
-        )}
+        {/* Delete Ledger Modal */}
 
         {/* Delete Ledger Modal */}
         {isDeleteLedgerOpen && (

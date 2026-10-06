@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IoSaveOutline } from "react-icons/io5";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import { ledgerApi } from "@/lib/api/ledger";
+import { partyApi } from "@/lib/api/party";
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
 import CustomSelect from "@/components/CustomSelect";
+import AddParty from "@/app/parties/components/AddParty";
 
 interface AddLedgerFormProps {
   ledgerToEdit?: any;
@@ -19,7 +21,10 @@ interface AddLedgerFormProps {
 
 export default function AddLedgerForm({ ledgerToEdit, onSuccess, onCancel }: AddLedgerFormProps = {}) {
   const router = useRouter();
-  const isEdit = Boolean(ledgerToEdit?.id);
+  const searchParams = useSearchParams();
+  const editId = ledgerToEdit?.id || searchParams?.get("id");
+  const fromParam = searchParams?.get("from");
+  const isEdit = Boolean(editId);
 
   const { isLimitReached, used, quota, featureName } = useLimitCheck("ledger", isEdit);
 
@@ -30,23 +35,62 @@ export default function AddLedgerForm({ ledgerToEdit, onSuccess, onCancel }: Add
     openingBalanceType: "debit",
   });
 
+  const [fetchedLedger, setFetchedLedger] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(Boolean(editId && !ledgerToEdit));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (ledgerToEdit) {
-      let lType = (ledgerToEdit.type || "bank").toLowerCase();
+    if (editId && !ledgerToEdit) {
+      setIsLoadingDetail(true);
+      Promise.all([
+        ledgerApi.getLedger(editId).catch(() => null),
+        partyApi.getPartyDetails(editId).catch(() => null),
+      ])
+        .then(([lRes, pRes]: any[]) => {
+          const lData = lRes?.body?.ledger || lRes?.body?.party || lRes?.body?.data || lRes?.body;
+          const pData = pRes?.body?.party || pRes?.body?.ledger || pRes?.body?.data || pRes?.body;
+          const data = pData || lData;
+          if (data) {
+            setFetchedLedger(data);
+          }
+        })
+        .finally(() => {
+          setIsLoadingDetail(false);
+        });
+    }
+  }, [editId, ledgerToEdit]);
+
+  const activeLedger = ledgerToEdit || fetchedLedger;
+  const activeType = String(activeLedger?.type || activeLedger?.partyType || activeLedger?.party_type || "").toLowerCase().trim();
+  const isPartyLedger = activeType === "customer" || activeType === "supplier";
+
+  useEffect(() => {
+    if (activeLedger) {
+      let lType = (activeLedger.type || "bank").toLowerCase();
       if (!["bank", "cash", "expense"].includes(lType)) {
         lType = "others";
       }
       setFormData({
-        name: ledgerToEdit.name || "",
+        name: activeLedger.name || activeLedger.partyName || "",
         type: lType,
-        openingBalance: String(ledgerToEdit.opening_balance ?? ledgerToEdit.openingBalance ?? "0"),
-        openingBalanceType: (ledgerToEdit.opening_balance_type || ledgerToEdit.openingBalanceType || "debit").toLowerCase(),
+        openingBalance: String(activeLedger.opening_balance ?? activeLedger.openingBalance ?? "0"),
+        openingBalanceType: (activeLedger.opening_balance_type || activeLedger.openingBalanceType || "debit").toLowerCase(),
       });
     }
-  }, [ledgerToEdit]);
+  }, [activeLedger]);
+
+  const handleBack = () => {
+    if (onCancel) {
+      onCancel();
+    } else if (fromParam) {
+      router.push(fromParam);
+    } else if (isEdit && editId) {
+      router.push(`/ledgers/${editId}`);
+    } else {
+      router.push("/ledgers");
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -75,8 +119,8 @@ export default function AddLedgerForm({ ledgerToEdit, onSuccess, onCancel }: Add
         opening_balance_type: formData.openingBalanceType as "debit" | "credit",
       };
 
-      if (isEdit && ledgerToEdit?.id) {
-        await ledgerApi.updateLedger(ledgerToEdit.id, payload);
+      if (isEdit && editId) {
+        await ledgerApi.updateLedger(editId, payload);
         toast.success("Ledger updated successfully!");
       } else {
         await ledgerApi.storeLedger(payload);
@@ -86,7 +130,7 @@ export default function AddLedgerForm({ ledgerToEdit, onSuccess, onCancel }: Add
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push("/ledgers");
+        handleBack();
       }
     } catch (err: any) {
       console.error("Error saving ledger:", err);
@@ -97,13 +141,19 @@ export default function AddLedgerForm({ ledgerToEdit, onSuccess, onCancel }: Add
     }
   };
 
-  const handleBack = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      router.push("/ledgers");
-    }
-  };
+  if (isPartyLedger) {
+    return <AddParty />;
+  }
+
+  if (isLoadingDetail) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center gi-page">
+        <div className="gi-card p-6 rounded-xl border gi-divider text-center shadow-xs">
+          <p className="text-sm gi-text-secondary">Loading ledger details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLimitReached) {
     return (

@@ -30,10 +30,12 @@ export default function SearchBar({
   searchOptions = ["All", "Invoices", "Parties", "Items", "Payments", "Staff", "Sites"],
   placeholder = "Search invoices, parties, items, payments...",
   onSelectInvoice = null,
+  autoFocus = false,
 }: {
   searchOptions?: string[];
   placeholder?: string;
   onSelectInvoice?: ((invoice: any) => void) | null;
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const { activeBusiness } = useAuth();
@@ -51,6 +53,15 @@ export default function SearchBar({
   const [selectedOption, setSelectedOption] = useState(searchOptions[0] || "All");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   // Fetch real-time searchable data from APIs whenever active business changes or search focused
   useEffect(() => {
