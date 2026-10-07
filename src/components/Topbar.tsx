@@ -201,7 +201,7 @@ export default function Topbar({
   return (
     <>
       <header
-        className="fixed top-0 right-0 z-40 h-14 gi-topbar flex items-center justify-between px-3 sm:px-5 select-none gap-3 transition-all duration-200"
+        className="fixed top-0 right-0 z-40 h-14 gi-topbar flex items-center justify-between px-3 sm:px-5 select-none gap-3 transition-[left] duration-300 ease-in-out"
         style={{ left: isDesktop ? `${sidebarWidth}px` : 0 }}
         suppressHydrationWarning
       >

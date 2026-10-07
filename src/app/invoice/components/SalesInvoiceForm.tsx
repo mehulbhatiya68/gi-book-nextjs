@@ -30,6 +30,7 @@ import QuantityStepper from "@/components/QuantityStepper";
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
+import { SkeletonForm } from "@/components/Skeleton";
 
 export default function SalesInvoiceForm() {
   const router = useRouter();
@@ -1073,6 +1074,10 @@ export default function SalesInvoiceForm() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoadingEdit) {
+    return <SkeletonForm />;
+  }
 
   if (isInvoiceLimitReached) {
     return (

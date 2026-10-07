@@ -28,7 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
 import PageHeader from "@/components/PageHeader";
-import { SkeletonDetails } from "@/components/Skeleton";
+import { SkeletonLedgerDetails } from "@/components/Skeleton";
 import { partyApi } from "@/lib/api/party";
 import { ledgerApi } from "@/lib/api/ledger";
 import { transactionApi } from "@/lib/api/transaction";
@@ -77,7 +77,7 @@ export default function LedgerDetailsView() {
   const [activeFilter, setActiveFilter] = useState("invoices");
   const [activeMobileTab, setActiveMobileTab] = useState<"invoices" | "payments">("invoices");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: "date", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "desc" });
 
   // Modals
   const [isDeleteLedgerOpen, setIsDeleteLedgerOpen] = useState(false);
@@ -663,9 +663,7 @@ export default function LedgerDetailsView() {
   if (isLoading) {
     return (
       <PermissionGuard module="Ledger">
-        <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-          <SkeletonDetails />
-        </div>
+        <SkeletonLedgerDetails />
       </PermissionGuard>
     );
   }
@@ -1325,10 +1323,11 @@ export default function LedgerDetailsView() {
                         ? (invNum.toLowerCase().startsWith("inv") || invNum.toLowerCase().startsWith("pur") ? invNum : `Invoice #${invNum}`)
                         : (tx.id ? `Invoice #${tx.id}` : "Invoice");
 
+                      const rawAmt = Number(tx.amount || 0);
                       const targetId = tx.invoice_id || tx.invoiceId || tx.id;
                       const txType = String(tx.type || tx.invoiceType || "").toLowerCase();
                       const isPurchase = txType.includes("purchase");
-                      const invSign = isCompanyLedger ? (isPurchase ? "+" : "-") : "";
+                      const invSign = rawAmt < 0 ? "-" : (isCompanyLedger ? (isPurchase ? "+" : "-") : "");
                       const invColor = isCompanyLedger
                         ? (isPurchase ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")
                         : "gi-text-primary";
@@ -1359,7 +1358,7 @@ export default function LedgerDetailsView() {
                             </span>
                           </td>
                           <td className={`py-2 px-2.5 text-right font-mono font-bold text-xs ${invColor}`}>
-                            {invSign}₹{amt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {invSign}₹{Math.abs(rawAmt).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                         </tr>
                       );

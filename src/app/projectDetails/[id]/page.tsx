@@ -1,15 +1,10 @@
 import { Suspense } from "react";
 import ProjectDetailsView from "@/app/siteProject/components/ProjectDetailsView";
+import { SkeletonDetails } from "@/components/Skeleton";
 
 export default function ProjectDetailsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen p-5 flex items-center justify-center gi-text-secondary">
-          Loading project details...
-        </div>
-      }
-    >
+    <Suspense fallback={<SkeletonDetails />}>
       <ProjectDetailsView />
     </Suspense>
   );

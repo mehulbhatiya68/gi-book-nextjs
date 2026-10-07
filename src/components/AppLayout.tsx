@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 
 import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import Topbar from "./Topbar";
@@ -18,25 +19,19 @@ export default function AppLayout({ children }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(210);
 
-  // Lazily initialize layout state to prevent post-mount re-render layout shifts
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window !== "undefined") {
-      return window.innerWidth >= 768;
-    }
-    return true; // Default to desktop on server
-  });
-
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("gi_book_sidebar_collapsed") === "true";
-    }
-    return false;
-  });
-
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gi_book_sidebar_collapsed");
+      if (saved === "true") {
+        setIsCollapsed(true);
+      }
+    }
+
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 768);
     };
@@ -108,13 +103,19 @@ export default function AppLayout({ children }) {
         />
       </div>
       <main
-        className="flex-1 pt-14 pb-safe w-full max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:w-full print:block"
+        className="flex-1 pt-14 pb-safe w-full max-w-full overflow-x-hidden transition-[padding-left] duration-300 ease-in-out print:p-0 print:m-0 print:pt-0 print:w-full print:block flex flex-col min-h-0"
         style={{ paddingLeft: isDesktop ? `${effectiveSidebarWidth}px` : undefined }}
         suppressHydrationWarning
       >
-        <div className="w-full max-w-full p-3 sm:p-5 lg:p-8 overflow-x-hidden print:p-0 print:m-0 print:w-full">
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="w-full max-w-full flex-1 min-h-0 flex flex-col p-3 sm:p-5 lg:p-6 overflow-x-hidden print:p-0 print:m-0 print:w-full"
+        >
           {children}
-        </div>
+        </motion.div>
       </main>
       <div className="print:hidden">
         <LogoutConfirmModal />

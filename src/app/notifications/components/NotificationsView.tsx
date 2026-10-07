@@ -24,6 +24,8 @@ import { SkeletonList } from "@/components/Skeleton";
 import { notificationApi } from "@/lib/api/notification";
 import FilterTabs from "@/components/FilterTabs";
 import { toast } from "react-toastify";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function NotificationsView() {
   const router = useRouter();
@@ -32,7 +34,7 @@ export default function NotificationsView() {
 
   const [activeTab, setActiveTab] = useState<"notifications" | "preferences">("notifications");
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
 
   // Preferences state
   const [preferences, setPreferences] = useState<Record<string, { is_enabled: boolean; config?: any }>>({
@@ -48,7 +50,7 @@ export default function NotificationsView() {
   const [isSavingPref, setIsSavingPref] = useState(false);
 
   const fetchNotifications = async () => {
-    setIsLoading(true);
+    startLoading();
     try {
       const res: any = await notificationApi.getNotifications({ page: 1, per_page: 50, silentError: true });
       const list = res?.body?.notifications || res?.body?.data || res?.data || (Array.isArray(res?.body) ? res.body : []);
@@ -56,7 +58,7 @@ export default function NotificationsView() {
     } catch (err) {
       console.error("Error fetching notifications:", err);
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
 

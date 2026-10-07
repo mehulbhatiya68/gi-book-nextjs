@@ -26,6 +26,8 @@ import { partyApi } from "@/lib/api/party";
 import PermissionGuard from "@/components/PermissionGuard";
 import { SkeletonCard, SkeletonBox } from "@/components/Skeleton";
 import { toast } from "react-toastify";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function LedgersView() {
   const router = useRouter();
@@ -33,7 +35,7 @@ export default function LedgersView() {
   const { t } = usePreferences();
 
   const [ledgers, setLedgers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +47,7 @@ export default function LedgersView() {
 
   const fetchLedgers = () => {
     if (activeBusiness?.id) {
-      setIsLoading(true);
+      startLoading();
       ledgerApi.getLedgers({ per_page: "all", silentError: true })
         .then((res: any) => {
           const list = Array.isArray(res?.body)
@@ -60,9 +62,10 @@ export default function LedgersView() {
           setLedgers(nonPartyLedgers);
         })
         .catch(() => setLedgers([]))
-        .finally(() => setIsLoading(false));
+        .finally(() => stopLoading());
     } else {
       setLedgers([]);
+      stopLoading();
     }
   };
 

@@ -30,6 +30,8 @@ import PermissionGuard from "@/components/PermissionGuard";
 import { SkeletonBox } from "@/components/Skeleton";
 import { normalizeInvoice, isPurchaseInvoice, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
 import FilterTabs from "@/components/FilterTabs";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function InvoicesView() {
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function InvoicesView() {
   const { t } = usePreferences();
 
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [emailUnverified, setEmailUnverified] = useState(false);
 
@@ -62,7 +64,7 @@ export default function InvoicesView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const [sortConfig, setSortConfig] = useState({ key: "created_at", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "desc" });
 
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<any | null>(null);
@@ -70,7 +72,7 @@ export default function InvoicesView() {
 
   // Fetch Invoices from API
   const fetchInvoices = async () => {
-    setIsLoading(true);
+    startLoading();
     setEmailUnverified(false);
     try {
       const res: any = await invoiceApi.getInvoices({ silentError: true });
@@ -86,7 +88,7 @@ export default function InvoicesView() {
       }
       setInvoices([]);
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -95,7 +97,7 @@ export default function InvoicesView() {
       fetchInvoices();
     } else {
       setInvoices([]);
-      setIsLoading(false);
+      stopLoading();
     }
   }, [activeBusiness?.id]);
 
@@ -194,7 +196,8 @@ export default function InvoicesView() {
   const handleSort = (key: string) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+        if (prev.direction === "asc") return { key, direction: "desc" };
+        return { key: null, direction: "asc" };
       }
       return { key, direction: "asc" };
     });

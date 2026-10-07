@@ -170,7 +170,7 @@ export default function Sidebar({
     <>
       {/* DESKTOP FIXED SIDEBAR */}
       <aside
-        className="hidden md:block fixed top-0 left-0 bottom-0 z-50 group/sidebar"
+        className="hidden md:block fixed top-0 left-0 bottom-0 z-50 group/sidebar transition-[width] duration-300 ease-in-out overflow-hidden"
         style={{ width: `${sidebarWidth}px` }}
         suppressHydrationWarning={true}
       >
@@ -193,6 +193,7 @@ export default function Sidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
               onClick={onCloseMobileSidebar}
               className="fixed inset-0 gi-modal-overlay"
             />
@@ -200,7 +201,7 @@ export default function Sidebar({
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.8 }}
               className="relative w-64 h-full z-10 shadow-2xl flex flex-col overflow-hidden"
             >
               <SidebarContent
@@ -286,9 +287,38 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full gi-sidebar select-none relative z-20">
       {/* ── Brand Logo Section (Top of Sidebar) ── */}
-      <div className={`h-14 px-3 flex items-center shrink-0 border-b border-white/5 ${collapsed ? "justify-center" : "justify-between"}`}>
-        {collapsed ? (
-          /* When collapsed: Logo container transforms into collapse slider toggle button on hover */
+      <div className="h-14 px-3 flex items-center shrink-0 border-b border-white/5 relative justify-between overflow-hidden">
+        {/* Expanded Header View */}
+        <div
+          className={`flex items-center justify-between w-full transition-all duration-300 ease-in-out ${collapsed ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
+            }`}
+        >
+          <Link href="/home" className="flex items-center gap-2 overflow-hidden py-1 shrink-0">
+            <img
+              src="/logo.png"
+              alt="GiBook Logo"
+              className="h-10 sm:h-11 w-auto object-contain shrink-0 max-w-[140px] py-0.5"
+            />
+          </Link>
+
+          {!isMobile && onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <IoChevronBack className="text-sm" />
+            </button>
+          )}
+        </div>
+
+        {/* Collapsed Header View (positioned overlay) */}
+        <div
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-in-out ${collapsed ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-75 pointer-events-none"
+            }`}
+        >
           <button
             type="button"
             onClick={() => onToggleCollapse && onToggleCollapse()}
@@ -309,30 +339,7 @@ function SidebarContent({
               </div>
             </div>
           </button>
-        ) : (
-          /* When expanded: Brand logo + Collapse Slider button */
-          <>
-            <Link href="/home" className="flex items-center gap-2 overflow-hidden py-1">
-              <img
-                src="/logo.png"
-                alt="GiBook Logo"
-                className="h-10 sm:h-11 w-auto object-contain shrink-0 max-w-[150px] py-0.5"
-              />
-            </Link>
-
-            {!isMobile && onToggleCollapse && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
-                title="Collapse sidebar"
-                aria-label="Collapse sidebar"
-              >
-                <IoChevronBack className="text-sm" />
-              </button>
-            )}
-          </>
-        )}
+        </div>
       </div>
 
       {/* Navigation Sections */}
@@ -361,26 +368,33 @@ function SidebarContent({
                         href={item.href}
                         onClick={() => onSelectPath && onSelectPath(item.href)}
                         title={collapsed ? displayName : undefined}
-                        className="relative block"
+                        className="relative block group/navitem"
                       >
                         <div
-                          className={`relative h-10 px-2.5 flex items-center gap-2.5 rounded-lg text-xs transition-colors duration-200 cursor-pointer overflow-hidden w-full ${active
-                            ? "font-bold text-white"
-                            : "text-slate-300 hover:text-white hover:bg-white/10 font-medium"
+                          className={`relative h-10 flex items-center rounded-lg text-xs transition-all duration-300 ease-in-out cursor-pointer overflow-hidden w-full ${collapsed ? "px-0 justify-center" : "px-2.5 gap-2.5"
+                            } ${active
+                              ? "font-bold text-white"
+                              : "text-slate-300 hover:text-white hover:bg-white/10 font-medium"
                             }`}
                         >
                           {active && (
-                            <div className="absolute inset-0 rounded-lg bg-blue-600 text-white z-0 shadow-md transition-all duration-150" />
+                            <motion.div
+                              layoutId={isMobile ? "activeNavBgMobile" : "activeNavBgDesktop"}
+                              className="absolute inset-0 rounded-lg bg-blue-600 text-white z-0 shadow-md"
+                              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                            />
                           )}
 
                           <div className="relative z-10 w-5 h-5 flex items-center justify-center shrink-0">
                             <Icon
-                              className="text-base shrink-0"
+                              className="text-base shrink-0 transition-transform duration-200 group-hover/navitem:scale-110"
                               style={{ color: active ? "#ffffff" : "#94A3B8" }}
                             />
                           </div>
                           <span
-                            className={`relative z-10 truncate whitespace-nowrap ${collapsed ? "hidden" : "max-w-[160px] opacity-100"
+                            className={`relative z-10 whitespace-nowrap transition-all duration-300 ease-in-out ${collapsed
+                                ? "opacity-0 max-w-0 -translate-x-3 overflow-hidden pointer-events-none"
+                                : "opacity-100 max-w-[160px] translate-x-0"
                               }`}
                             style={{ color: active ? "#ffffff" : undefined }}
                           >
@@ -398,7 +412,7 @@ function SidebarContent({
       </LayoutGroup>
 
       {/* ── Business Selection Section (Bottom of Sidebar) ── */}
-      <div className="p-2 relative shrink-0 z-30" ref={businessMenuRef}>
+      <div className="p-2 relative shrink-0 z-30 overflow-visible" ref={businessMenuRef}>
         <div className="flex items-center justify-between gap-1">
           <button
             type="button"
@@ -409,20 +423,24 @@ function SidebarContent({
                 setBusinessMenuOpen(!businessMenuOpen);
               }
             }}
-            className={`w-full h-11 px-2 rounded-xl bg-white/5 hover:bg-white/10 flex items-center cursor-pointer group min-w-0 transition ${collapsed ? "justify-center" : "gap-2.5 px-2.5"
+            className={`w-full h-11 rounded-xl bg-white/5 hover:bg-white/10 flex items-center cursor-pointer group min-w-0 transition-all duration-300 ease-in-out ${collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"
               }`}
             title={collapsed ? "Click to expand sidebar" : "Click to switch active business"}
           >
-            <CustomBusinessLogo
-              logoPath={getBizLogo(activeBusiness)}
-              name={getBizName(activeBusiness)}
-              size={28}
-              shape="rounded"
-            />
+            <div className="shrink-0 flex items-center justify-center">
+              <CustomBusinessLogo
+                logoPath={getBizLogo(activeBusiness)}
+                name={getBizName(activeBusiness)}
+                size={28}
+                shape="rounded"
+              />
+            </div>
 
             {/* Business Details */}
             <div
-              className={`min-w-0 text-left flex-1 overflow-hidden whitespace-nowrap ${collapsed ? "hidden" : "max-w-[200px] opacity-100"
+              className={`min-w-0 text-left flex-1 whitespace-nowrap transition-all duration-300 ease-in-out ${collapsed
+                  ? "opacity-0 max-w-0 overflow-hidden pointer-events-none -translate-x-3"
+                  : "opacity-100 max-w-[200px] translate-x-0"
                 }`}
             >
               <h1 className="text-xs font-bold text-white tracking-tight truncate leading-tight group-hover:opacity-90">
@@ -435,7 +453,7 @@ function SidebarContent({
 
             {/* Chevron Arrow */}
             <IoChevronDown
-              className={`text-xs text-slate-400 shrink-0 ${collapsed ? "hidden" : "w-3 opacity-100"
+              className={`text-xs text-slate-400 shrink-0 transition-all duration-300 ease-in-out ${collapsed ? "opacity-0 w-0 max-w-0 overflow-hidden pointer-events-none" : "w-3 opacity-100"
                 }`}
             />
           </button>
@@ -490,8 +508,8 @@ function SidebarContent({
                         setBusinessMenuOpen(false);
                       }}
                       className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl text-xs text-left transition cursor-pointer ${activeBusiness?.id === bus.id
-                        ? "bg-blue-600 text-white font-bold shadow-md"
-                        : "text-slate-300 hover:text-white hover:bg-white/10 font-medium"
+                          ? "bg-blue-600 text-white font-bold shadow-md"
+                          : "text-slate-300 hover:text-white hover:bg-white/10 font-medium"
                         }`}
                     >
                       <CustomBusinessLogo
@@ -501,8 +519,12 @@ function SidebarContent({
                         shape="rounded"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate font-semibold ${activeBusiness?.id === bus.id ? "text-white" : ""}`}>{getBizName(bus)}</p>
-                        <p className={`text-[10px] capitalize ${activeBusiness?.id === bus.id ? "text-blue-100" : "text-slate-400"}`}>{getBizType(bus)}</p>
+                        <p className={`truncate font-semibold ${activeBusiness?.id === bus.id ? "text-white" : ""}`}>
+                          {getBizName(bus)}
+                        </p>
+                        <p className={`text-[10px] capitalize ${activeBusiness?.id === bus.id ? "text-blue-100" : "text-slate-400"}`}>
+                          {getBizType(bus)}
+                        </p>
                       </div>
                       {activeBusiness?.id === bus.id && (
                         <span className="h-2 w-2 rounded-full bg-white shrink-0 shadow-xs" />

@@ -24,12 +24,14 @@ import PermissionGuard from "@/components/PermissionGuard";
 import { siteProjectApi } from "@/lib/api/siteProject";
 import { SkeletonCard, SkeletonBox } from "@/components/Skeleton";
 import FilterTabs from "@/components/FilterTabs";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function SiteProject() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
   const [siteProjects, setSiteProjects] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [itemToDelete, setItemToDelete] = useState<any>(null);
@@ -39,10 +41,10 @@ export default function SiteProject() {
   const loadSiteProjects = async () => {
     if (!activeBusiness?.id) {
       setSiteProjects([]);
-      setIsLoading(false);
+      stopLoading();
       return;
     }
-    setIsLoading(true);
+    startLoading();
     try {
       const res: any = await siteProjectApi.getSiteProjects(activeBusiness.id, { silentError: true });
       const list = Array.isArray(res?.body) ? res.body : [];
@@ -51,7 +53,7 @@ export default function SiteProject() {
       console.warn("Failed to fetch site/projects:", err);
       setSiteProjects([]);
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -353,11 +355,10 @@ export default function SiteProject() {
                   </div>
 
                   <span
-                    className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 ${
-                      isProject
+                    className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 ${isProject
                         ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
                         : "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
-                    }`}
+                      }`}
                   >
                     {item.type}
                   </span>

@@ -78,8 +78,7 @@ export default function PartyTransactions({ party, activeTab = "invoices" }: { p
         date: inv.invoice_date || inv.invoiceDate || inv.date || inv.created_at,
         amount: Number(inv.amount ?? inv.total_amount ?? inv.totalAmount ?? inv.total ?? 0),
         status: String(inv.status || "unpaid").toLowerCase(),
-      }))
-      .sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+      }));
   }, [party, invoices]);
 
   const partyPayments = useMemo(() => {
@@ -115,7 +114,7 @@ export default function PartyTransactions({ party, activeTab = "invoices" }: { p
       }
     });
 
-    return list.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    return list;
   }, [party, payments]);
 
   const isPaymentsTab = activeTab === "payments";

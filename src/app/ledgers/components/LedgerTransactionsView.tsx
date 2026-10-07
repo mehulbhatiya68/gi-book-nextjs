@@ -32,6 +32,8 @@ import { siteProjectApi } from "@/lib/api/siteProject";
 import { invoiceApi } from "@/lib/api/invoice";
 import AddLedgerTransactionForm from "./AddLedgerTransactionForm";
 import { toast } from "react-toastify";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function LedgerTransactionsView() {
   const { activeBusiness, hasPermission } = useAuth();
@@ -41,7 +43,7 @@ export default function LedgerTransactionsView() {
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [siteProjects, setSiteProjects] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,11 +61,11 @@ export default function LedgerTransactionsView() {
       setLedgers([]);
       setSiteProjects([]);
       setInvoices([]);
-      setIsLoading(false);
+      stopLoading();
       return;
     }
 
-    setIsLoading(true);
+    startLoading();
     try {
       const [ledgersRes, siteProjectsRes, invoicesRes]: [any, any, any] = await Promise.all([
         ledgerApi.getLedgers({ per_page: "all", silentError: true }).catch(() => ({ body: [] })),
@@ -114,7 +116,7 @@ export default function LedgerTransactionsView() {
       console.error("Error fetching transactions data:", err);
       setLedgerTransactions([]);
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -237,10 +239,24 @@ export default function LedgerTransactionsView() {
     const query = searchQuery.toLowerCase().trim();
 
     return ledgerTransactions.filter((tx) => {
-      const fromId = tx.payment_ledger_id || tx.fromLedgerId;
-      const toId = tx.party_ledger_id || tx.toLedgerId;
-      const fromName = getLedgerName(fromId).toLowerCase();
-      const toName = getLedgerName(toId).toLowerCase();
+      const isPayIn = TransactionDisplayUtils.isPaymentIn(tx);
+      const fromId = isPayIn
+        ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
+        : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
+      const toId = isPayIn
+        ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
+        : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
+
+      const fromName = (
+        isPayIn
+          ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
+          : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId))
+      ).toLowerCase();
+      const toName = (
+        isPayIn
+          ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
+          : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId))
+      ).toLowerCase();
       const remarkStr = (tx.remark || "").toLowerCase();
       const typeStr = TransactionDisplayUtils.getNormalizedType(tx);
       const rawType = String(tx.type || tx.transactionType || "").toLowerCase().trim();
@@ -503,11 +519,20 @@ export default function LedgerTransactionsView() {
           ) : (
             <div className="space-y-3">
               {sortedTransactions.map((tx) => {
-                const fromId = tx.payment_ledger_id || tx.fromLedgerId;
-                const toId = tx.party_ledger_id || tx.toLedgerId;
+                const isPayIn = TransactionDisplayUtils.isPaymentIn(tx);
+                const fromId = isPayIn
+                  ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
+                  : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
+                const toId = isPayIn
+                  ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
+                  : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
                 const dateStr = tx.transaction_date || tx.date || (tx.created_at ? String(tx.created_at).split("T")[0] : "—");
-                const fromName = getLedgerName(fromId);
-                const toName = getLedgerName(toId);
+                const fromName = isPayIn
+                  ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
+                  : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId));
+                const toName = isPayIn
+                  ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
+                  : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId));
                 const fromType = getLedgerType(fromId);
                 const toType = getLedgerType(toId);
                 const amt = Number(tx.amount || 0);
@@ -660,22 +685,32 @@ export default function LedgerTransactionsView() {
                   </tr>
                 ) : (
                   sortedTransactions.map((tx) => {
-                    const fromId = tx.payment_ledger_id || tx.fromLedgerId;
-                    const toId = tx.party_ledger_id || tx.toLedgerId;
+                    const isPayIn = TransactionDisplayUtils.isPaymentIn(tx);
+                    const fromId = isPayIn
+                      ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
+                      : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
+                    const toId = isPayIn
+                      ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
+                      : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
                     const dateStr = tx.transaction_date || tx.date || "—";
                     const projId = tx.project_id || tx.siteProjectId;
                     const proofImg = tx.proof_image || tx.imageProof;
                     const fromType = getLedgerType(fromId);
                     const toType = getLedgerType(toId);
-                    const fromName = getLedgerName(fromId);
-                    const toName = getLedgerName(toId);
+                    const fromName = isPayIn
+                      ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
+                      : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId));
+                    const toName = isPayIn
+                      ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
+                      : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId));
                     const linkedInv = getLinkedInvoice(tx);
                     const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
 
                     const isFromComp = String(fromType || "").toLowerCase().includes("company") || String(fromName || "").toLowerCase().includes("company");
                     const isToComp = String(toType || "").toLowerCase().includes("company") || String(toName || "").toLowerCase().includes("company");
                     const isCompTx = isFromComp || isToComp;
-                    const txSign = isCompTx ? (isFromComp ? "-" : "+") : (TransactionDisplayUtils.isPaymentIn(tx) ? "+" : TransactionDisplayUtils.isPaymentOut(tx) ? "-" : "");
+                    const rawAmt = Number(tx.amount || 0);
+                    const txSign = rawAmt < 0 ? "-" : (isCompTx ? (isFromComp ? "-" : "+") : (TransactionDisplayUtils.isPaymentIn(tx) ? "+" : TransactionDisplayUtils.isPaymentOut(tx) ? "-" : ""));
                     const txColor = isCompTx ? (isFromComp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400") : "gi-text-primary";
 
                     return (
@@ -700,7 +735,7 @@ export default function LedgerTransactionsView() {
                           {getTypeBadge(tx.type || tx.transactionType)}
                         </td>
                         <td className={`py-2 px-2 text-right font-mono font-bold text-xs whitespace-nowrap ${txColor}`}>
-                          {txSign}₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {txSign}₹{Math.abs(rawAmt).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-2 px-2 max-w-[110px] truncate" title={projId ? getSiteName(projId) : ""}>
                           {projId ? (

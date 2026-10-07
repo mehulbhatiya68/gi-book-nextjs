@@ -24,6 +24,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
+import { SkeletonInvoiceDetails } from "@/components/Skeleton";
 import { invoiceApi } from "@/lib/api/invoice";
 import { paymentApi } from "@/lib/api/payment";
 import { transactionApi } from "@/lib/api/transaction";
@@ -31,6 +32,7 @@ import { ledgerApi } from "@/lib/api/ledger";
 import { apiClient } from "@/lib/api/client";
 import { toast } from "react-toastify";
 import { isPurchaseInvoice, isSalesInvoice, getInvoiceNumber, getInvoicePartyName, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
+import { getPaymentModeDisplay } from "@/lib/utils/transactionDisplayUtils";
 
 const formatAddress = (addr: any) => {
   if (!addr) return "";
@@ -63,10 +65,21 @@ export default function InvoiceDetailsView() {
   const [invoice, setInvoice] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [partyDetails, setPartyDetails] = useState<any>(null);
+  const [allLedgers, setAllLedgers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showTxModal, setShowTxModal] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<any | null>(null);
   const [showDeleteInvoiceModal, setShowDeleteInvoiceModal] = useState(false);
+
+  const ledgersMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (allLedgers || []).forEach((l: any) => {
+      if (l?.id) {
+        map.set(String(l.id), l);
+      }
+    });
+    return map;
+  }, [allLedgers]);
 
   useEffect(() => {
     const idStr = Array.isArray(invoiceId) ? invoiceId[0] : invoiceId;
@@ -91,30 +104,49 @@ export default function InvoiceDetailsView() {
             setInvoice(rawInv);
             setIsLoading(false);
 
-            // Asynchronously fetch payment history and full ledger profile in background without blocking invoice view
+            // Asynchronously fetch payment history, invoice payments, full ledger profile & all ledgers in background without blocking invoice view
             const targetLedgerId = rawInv?.ledger_id || rawInv?.party_ledger_id || rawInv?.party?.id || rawInv?.supplier?.id;
             Promise.all([
               paymentApi.getPayments({ silentError: true }).catch(() => null),
+              paymentApi.getPayments({ invoice_id: String(idStr), silentError: true }).catch(() => null),
+              transactionApi.getTransactions({ invoice_id: String(idStr), silentError: true }).catch(() => null),
               targetLedgerId
                 ? transactionApi.getTransactions({ type: "ledger", id: targetLedgerId, per_page: "all", silentError: true }).catch(() => null)
                 : Promise.resolve(null),
               targetLedgerId
                 ? ledgerApi.getLedger(targetLedgerId, { silentError: true }).catch(() => null)
                 : Promise.resolve(null),
+              ledgerApi.getLedgers({ silentError: true }).catch(() => null),
             ])
-              .then(([payRes, ledgerTxRes, ledgerDetailRes]: any[]) => {
-                const list = payRes?.body?.payments || payRes?.body?.data || (Array.isArray(payRes?.body) ? payRes.body : payRes?.data || []);
-                let combinedPayments = Array.isArray(list) ? [...list] : [];
+              .then(([payRes, invPayRes, invTxRes, ledgerTxRes, ledgerDetailRes, ledgersRes]: any[]) => {
+                let combinedPayments: any[] = [];
 
-                const ledgerTxs = ledgerTxRes?.body?.transactions || ledgerTxRes?.body?.data || (Array.isArray(ledgerTxRes?.body) ? ledgerTxRes.body : []);
-                if (Array.isArray(ledgerTxs)) {
-                  combinedPayments = [...combinedPayments, ...ledgerTxs];
-                }
+                const extractArray = (res: any) =>
+                  Array.isArray(res?.body)
+                    ? res.body
+                    : res?.body?.transactions || res?.body?.payments || res?.body?.data || res?.data || (Array.isArray(res) ? res : []);
+
+                const pList = extractArray(payRes);
+                const ipList = extractArray(invPayRes);
+                const itxList = extractArray(invTxRes);
+                const ltxList = extractArray(ledgerTxRes);
+
+                [pList, ipList, itxList, ltxList].forEach((arr) => {
+                  if (Array.isArray(arr)) {
+                    combinedPayments.push(...arr);
+                  }
+                });
+
                 setPayments(combinedPayments);
 
                 const fullLedger = ledgerDetailRes?.body?.ledger || ledgerDetailRes?.body?.data || ledgerDetailRes?.body || ledgerDetailRes;
                 if (fullLedger && typeof fullLedger === "object") {
                   setPartyDetails(fullLedger);
+                }
+
+                const allL = ledgersRes?.body?.ledgers || ledgersRes?.body?.data || (Array.isArray(ledgersRes?.body) ? ledgersRes.body : []);
+                if (Array.isArray(allL)) {
+                  setAllLedgers(allL);
                 }
               })
               .catch(() => {});
@@ -156,6 +188,7 @@ export default function InvoiceDetailsView() {
       setInvoice(null);
       setPayments([]);
       setPartyDetails(null);
+      setAllLedgers([]);
       setIsLoading(false);
     }
   }, [activeBusiness?.id, invoiceId]);
@@ -184,9 +217,21 @@ export default function InvoiceDetailsView() {
       (typeof invoice.invoiceNumber === "object" ? invoice.invoiceNumber?.number : invoice.invoiceNumber) ||
       ""
     ).toLowerCase().trim();
+    const invDate = invoice.invoice_date || invoice.invoiceDate || invoice.date || (invoice.created_at ? String(invoice.created_at).split("T")[0] : new Date().toISOString().split("T")[0]);
+
+    // Build lookup map of API payments by ID & tx numbers
+    const apiPaymentsMap = new Map<string, any>();
+    (payments || []).forEach((p: any) => {
+      if (!p || typeof p !== "object") return;
+      if (p.id) apiPaymentsMap.set(String(p.id).toLowerCase(), p);
+      if (p.payment_id) apiPaymentsMap.set(String(p.payment_id).toLowerCase(), p);
+      if (p.transaction_number) apiPaymentsMap.set(String(p.transaction_number).toLowerCase(), p);
+      if (p.number) apiPaymentsMap.set(String(p.number).toLowerCase(), p);
+      if (p.receiptNo) apiPaymentsMap.set(String(p.receiptNo).toLowerCase(), p);
+    });
 
     const matchedAppPayments = (payments || []).filter((p: any) => {
-      // Exclude transfers (account-to-account transfers)
+      if (!p || typeof p !== "object") return false;
       const isTransfer = Boolean(
         p.is_transfer ||
         p.type === "transfer" ||
@@ -200,7 +245,6 @@ export default function InvoiceDetailsView() {
       const pInvNum = String(p.invoice_number || p.invoiceNumber || p.invoiceNo || "").toLowerCase().trim();
       const pRemark = String(p.remark || p.notes || p.description || p.reference || "").toLowerCase().trim();
 
-      // Must explicitly match this invoice ID, invoice number, or remark containing invoice number
       if (pInvId && pInvId === invIdStr) return true;
       if (invNumStr && pInvNum && pInvNum === invNumStr) return true;
       if (invNumStr && pRemark && pRemark.includes(invNumStr)) return true;
@@ -209,24 +253,29 @@ export default function InvoiceDetailsView() {
 
     const combined: any[] = [];
 
-    // Add explicit history items if they belong to this invoice and are not transfers
+    // Add explicit history items, merging with full API objects if matched
     explicitHistory.forEach((eh: any) => {
       const isTransfer = Boolean(eh.is_transfer || eh.type === "transfer" || eh.transaction_type === "transfer");
       if (isTransfer) return;
 
+      const matchKey = String(eh.id || eh.payment_id || eh.transaction_number || eh.number || eh.receiptNo || "").toLowerCase();
+      const apiMatch = matchKey ? apiPaymentsMap.get(matchKey) : null;
+      const mergedItem = apiMatch ? { ...eh, ...apiMatch } : eh;
+
       combined.push({
-        id: eh.id || `eh-${Math.random()}`,
-        number: eh.number || eh.transaction_number || eh.receiptNo || (eh.id ? `TXN-${String(eh.id).slice(0, 8).toUpperCase()}` : "—"),
-        date: eh.date || eh.transaction_date || invDate,
-        time: eh.time || "",
-        mode: eh.mode || eh.payment_ledger?.name || "Cash / Bank",
-        referenceNumber: eh.referenceNumber || eh.remark || eh.reference || "-",
-        recordedBy: eh.recordedBy || "System",
-        amount: Number(eh.amount || 0),
+        id: mergedItem.id || `eh-${Math.random()}`,
+        number: mergedItem.number || mergedItem.transaction_number || mergedItem.receiptNo || (mergedItem.id ? `TXN-${String(mergedItem.id).slice(0, 8).toUpperCase()}` : "—"),
+        date: mergedItem.date || mergedItem.transaction_date || invDate,
+        time: mergedItem.time || "",
+        mode: getPaymentModeDisplay(mergedItem, ledgersMap),
+        referenceNumber: mergedItem.referenceNumber || mergedItem.remark || mergedItem.reference || "-",
+        recordedBy: mergedItem.recordedBy || "System",
+        amount: Number(mergedItem.amount || 0),
+        rawObject: mergedItem,
       });
     });
 
-    // Add matched API payments
+    // Add matched API payments that were not already in explicit history
     matchedAppPayments.forEach((ap: any) => {
       const exists = combined.some(
         (cp) => String(cp.id) === String(ap.id) || (cp.number && String(cp.number) === String(ap.transaction_number || ap.number || ap.id))
@@ -239,10 +288,11 @@ export default function InvoiceDetailsView() {
           number: ap.transaction_number || ap.number || ap.receiptNo || (ap.id ? `TXN-${String(ap.id).slice(0, 8).toUpperCase()}` : "—"),
           date: txDate,
           time: txTime,
-          mode: ap.payment_ledger?.name || ap.mode || ap.paymentMode || "Cash / Bank",
+          mode: getPaymentModeDisplay(ap, ledgersMap),
           referenceNumber: ap.remark || ap.reference_number || ap.reference || ap.notes || "-",
           recordedBy: ap.createdBy || ap.recordedBy || "System",
           amount: Number(ap.amount || 0),
+          rawObject: ap,
         });
       }
     });
@@ -261,24 +311,57 @@ export default function InvoiceDetailsView() {
           number: `RECEIPT #${receiptNo}`,
           date: txDate,
           time: "",
-          mode: invoice.payment_mode || invoice.paymentMode || "Cash / Bank",
+          mode: getPaymentModeDisplay(invoice, ledgersMap),
           referenceNumber: isPaidStatus ? "Full Invoice Settlement" : "Partial Invoice Payment",
           recordedBy: "System",
           amount: paidAmt > 0 ? paidAmt : totalAmt,
+          rawObject: invoice,
         });
       }
     }
 
     return combined;
-  }, [invoice, payments]);
+  }, [invoice, payments, ledgersMap]);
+
+  useEffect(() => {
+    if (!resolvedPaymentHistory || resolvedPaymentHistory.length === 0) return;
+
+    const missingDetailsTxs = resolvedPaymentHistory.filter((ph: any) => {
+      if (!ph?.id || String(ph.id).startsWith("auto-tx-") || String(ph.id).startsWith("eh-")) return false;
+      const raw = ph.rawObject;
+      const hasMode = Boolean(
+        raw?.payment_ledger?.name ||
+        raw?.paymentLedger?.name ||
+        raw?.payment_ledger_name ||
+        raw?.payment_mode ||
+        raw?.paymentMode ||
+        raw?.payment_method
+      );
+      return !hasMode;
+    });
+
+    if (missingDetailsTxs.length > 0) {
+      Promise.all(
+        missingDetailsTxs.map((ph: any) => transactionApi.getTransactionById(String(ph.id)).catch(() => null))
+      ).then((results: any[]) => {
+        const fetched: any[] = [];
+        results.forEach((res) => {
+          const tx = res?.body?.transaction || res?.body?.data || res?.body?.payment || (res?.body && typeof res.body === "object" ? res.body : null);
+          if (tx && tx.id) {
+            fetched.push(tx);
+          }
+        });
+        if (fetched.length > 0) {
+          setPayments((prev: any[]) => [...prev, ...fetched]);
+        }
+      }).catch(() => {});
+    }
+  }, [resolvedPaymentHistory]);
 
   if (isLoading) {
     return (
       <PermissionGuard module="Invoice">
-        <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3 text-center p-6 gi-text-muted">
-          <div className="w-8 h-8 border-3 border-[var(--gi-primary)] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-semibold">Loading invoice details from backend API...</span>
-        </div>
+        <SkeletonInvoiceDetails />
       </PermissionGuard>
     );
   }

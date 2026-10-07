@@ -31,6 +31,10 @@ export interface TransactionData {
   paymentLedgerId?: string;
   party_ledger_id?: string;
   partyLedgerId?: string;
+  from_ledger_id?: string;
+  fromLedgerId?: string;
+  to_ledger_id?: string;
+  toLedgerId?: string;
   project_id?: string | null;
   projectId?: string | null;
   site_id?: string | null;
@@ -41,6 +45,10 @@ export interface TransactionData {
   paymentLedger?: any;
   party_ledger?: any;
   partyLedger?: any;
+  from_ledger?: any;
+  fromLedger?: any;
+  to_ledger?: any;
+  toLedger?: any;
   project?: any;
   site?: any;
   sales_invoice?: any;
@@ -75,6 +83,39 @@ export function normalizeTransaction(raw: any): TransactionData {
   const txDate = String(raw.transaction_date ?? raw.due_date ?? raw.date ?? raw.created_at ?? '').trim();
   const isPay = txType === 'payment_in' || txType === 'payment_out';
 
+  const rawFromId = raw.from_ledger_id || raw.fromLedgerId || raw.from_ledger?.id || raw.fromLedger?.id;
+  const rawToId = raw.to_ledger_id || raw.toLedgerId || raw.to_ledger?.id || raw.toLedger?.id;
+
+  const rawPaymentId = raw.payment_ledger_id || raw.paymentLedgerId || raw.payment_ledger?.id || raw.paymentLedger?.id;
+  const rawPartyId = raw.party_ledger_id || raw.partyLedgerId || raw.party_ledger?.id || raw.partyLedger?.id || raw.party_id || raw.partyId || raw.party?.id;
+
+  const rawFromObj = raw.from_ledger || raw.fromLedger;
+  const rawToObj = raw.to_ledger || raw.toLedger;
+  const rawPaymentObj = raw.payment_ledger || raw.paymentLedger;
+  const rawPartyObj = raw.party_ledger || raw.partyLedger || raw.party;
+
+  let fromLedgerId = rawFromId;
+  let toLedgerId = rawToId;
+  let fromLedgerObj = rawFromObj;
+  let toLedgerObj = rawToObj;
+
+  if (txType === 'payment_in' || txType === 'credit') {
+    fromLedgerId = rawPartyId || rawFromId;
+    toLedgerId = rawPaymentId || rawToId;
+    fromLedgerObj = rawPartyObj || rawFromObj;
+    toLedgerObj = rawPaymentObj || rawToObj;
+  } else if (txType === 'payment_out' || txType === 'debit') {
+    fromLedgerId = rawPaymentId || rawFromId;
+    toLedgerId = rawPartyId || rawToId;
+    fromLedgerObj = rawPaymentObj || rawFromObj;
+    toLedgerObj = rawPartyObj || rawToObj;
+  } else {
+    fromLedgerId = rawFromId || rawPaymentId;
+    toLedgerId = rawToId || rawPartyId;
+    fromLedgerObj = rawFromObj || rawPaymentObj;
+    toLedgerObj = rawToObj || rawPartyObj;
+  }
+
   return {
     ...raw,
     id: raw.id ? String(raw.id) : undefined,
@@ -89,20 +130,28 @@ export function normalizeTransaction(raw: any): TransactionData {
     remark: raw.remark || raw.notes || '',
     proof_image: raw.proof_image || raw.proofImage || null,
     proofImage: raw.proof_image || raw.proofImage || null,
-    payment_ledger_id: raw.payment_ledger_id || raw.paymentLedgerId,
-    paymentLedgerId: raw.payment_ledger_id || raw.paymentLedgerId,
-    party_ledger_id: raw.party_ledger_id || raw.partyLedgerId,
-    partyLedgerId: raw.party_ledger_id || raw.partyLedgerId,
+    payment_ledger_id: rawPaymentId,
+    paymentLedgerId: rawPaymentId,
+    party_ledger_id: rawPartyId,
+    partyLedgerId: rawPartyId,
+    from_ledger_id: fromLedgerId,
+    fromLedgerId: fromLedgerId,
+    to_ledger_id: toLedgerId,
+    toLedgerId: toLedgerId,
+    payment_ledger: rawPaymentObj || null,
+    paymentLedger: rawPaymentObj || null,
+    party_ledger: rawPartyObj || null,
+    partyLedger: rawPartyObj || null,
+    from_ledger: fromLedgerObj || null,
+    fromLedger: fromLedgerObj || null,
+    to_ledger: toLedgerObj || null,
+    toLedger: toLedgerObj || null,
     project_id: raw.project_id || raw.projectId || null,
     projectId: raw.project_id || raw.projectId || null,
     site_id: raw.site_id || raw.siteId || null,
     siteId: raw.site_id || raw.siteId || null,
     sales_invoice_id: raw.sales_invoice_id || raw.salesInvoiceId || null,
     salesInvoiceId: raw.sales_invoice_id || raw.salesInvoiceId || null,
-    payment_ledger: raw.payment_ledger || raw.paymentLedger || null,
-    paymentLedger: raw.payment_ledger || raw.paymentLedger || null,
-    party_ledger: raw.party_ledger || raw.partyLedger || null,
-    partyLedger: raw.party_ledger || raw.partyLedger || null,
     project: raw.project || null,
     site: raw.site || null,
     sales_invoice: raw.sales_invoice || raw.salesInvoice || null,

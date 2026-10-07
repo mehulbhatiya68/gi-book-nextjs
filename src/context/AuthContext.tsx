@@ -276,6 +276,10 @@ export function AuthProvider({ children }) {
         await businessApi.selectBusiness(targetBiz.id);
       } catch (err) {
         console.warn("API select active business warning:", err);
+      } finally {
+        if (typeof window !== "undefined") {
+          window.location.reload();
+        }
       }
     }
   };

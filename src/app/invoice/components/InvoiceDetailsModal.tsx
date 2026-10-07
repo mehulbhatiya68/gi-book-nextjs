@@ -20,6 +20,8 @@ import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { paymentApi } from "@/lib/api/payment";
 import { invoiceApi } from "@/lib/api/invoice";
+import { ledgerApi } from "@/lib/api/ledger";
+import { getPaymentModeDisplay } from "@/lib/utils/transactionDisplayUtils";
 
 const formatAddress = (addr: any) => {
   if (!addr) return "";
@@ -39,6 +41,7 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
 
   const [fullInvoice, setFullInvoice] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [allLedgers, setAllLedgers] = useState<any[]>([]);
 
   useEffect(() => {
     if (invoice?.id) {
@@ -56,15 +59,47 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
   }, [invoice?.id]);
 
   useEffect(() => {
-    if (activeBusiness?.id) {
-      paymentApi.getPayments({ silentError: true }).then((res: any) => {
-        const list = Array.isArray(res?.body) ? res.body : (res?.body?.data || res?.body?.payments || []);
-        setPayments(Array.isArray(list) ? list : []);
-      }).catch(() => setPayments([]));
+    if (activeBusiness?.id && invoice?.id) {
+      Promise.all([
+        paymentApi.getPayments({ silentError: true }).catch(() => null),
+        paymentApi.getPayments({ invoice_id: String(invoice.id), silentError: true }).catch(() => null),
+        ledgerApi.getLedgers({ silentError: true }).catch(() => null),
+      ]).then(([payRes, invPayRes, ledgersRes]: any[]) => {
+        let combinedPayments: any[] = [];
+        const extractArray = (res: any) =>
+          Array.isArray(res?.body)
+            ? res.body
+            : res?.body?.transactions || res?.body?.payments || res?.body?.data || res?.data || (Array.isArray(res) ? res : []);
+
+        const pList = extractArray(payRes);
+        const ipList = extractArray(invPayRes);
+        [pList, ipList].forEach((arr) => {
+          if (Array.isArray(arr)) combinedPayments.push(...arr);
+        });
+
+        setPayments(combinedPayments);
+
+        const lList = Array.isArray(ledgersRes?.body) ? ledgersRes.body : (ledgersRes?.body?.data || ledgersRes?.body?.ledgers || []);
+        setAllLedgers(Array.isArray(lList) ? lList : []);
+      }).catch(() => {
+        setPayments([]);
+        setAllLedgers([]);
+      });
     } else {
       setPayments([]);
+      setAllLedgers([]);
     }
-  }, [activeBusiness?.id]);
+  }, [activeBusiness?.id, invoice?.id]);
+
+  const ledgersMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (allLedgers || []).forEach((l: any) => {
+      if (l?.id) {
+        map.set(String(l.id), l);
+      }
+    });
+    return map;
+  }, [allLedgers]);
 
   const invObj = fullInvoice || invoice;
 
@@ -76,8 +111,18 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
     const invNumStr = String(invObj.invoice_number || invObj.invoiceNumberStr || invObj.invoiceNumber || "").toLowerCase().trim();
     const invDate = invObj.invoice_date || invObj.invoiceDate || invObj.date || new Date().toISOString().split("T")[0];
 
+    const apiPaymentsMap = new Map<string, any>();
+    (payments || []).forEach((p: any) => {
+      if (!p || typeof p !== "object") return;
+      if (p.id) apiPaymentsMap.set(String(p.id).toLowerCase(), p);
+      if (p.payment_id) apiPaymentsMap.set(String(p.payment_id).toLowerCase(), p);
+      if (p.transaction_number) apiPaymentsMap.set(String(p.transaction_number).toLowerCase(), p);
+      if (p.number) apiPaymentsMap.set(String(p.number).toLowerCase(), p);
+      if (p.receiptNo) apiPaymentsMap.set(String(p.receiptNo).toLowerCase(), p);
+    });
+
     const appPayments = (payments || []).filter((p) => {
-      // Exclude transfers (account-to-account transfers)
+      if (!p || typeof p !== "object") return false;
       const isTransfer = Boolean(
         p.is_transfer ||
         p.type === "transfer" ||
@@ -100,15 +145,20 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
       const isTransfer = Boolean(eh.is_transfer || eh.type === "transfer" || eh.transaction_type === "transfer");
       if (isTransfer) return;
 
+      const matchKey = String(eh.id || eh.payment_id || eh.transaction_number || eh.number || eh.receiptNo || "").toLowerCase();
+      const apiMatch = matchKey ? apiPaymentsMap.get(matchKey) : null;
+      const mergedItem = apiMatch ? { ...eh, ...apiMatch } : eh;
+
       combined.push({
-        id: eh.id || `eh-${Math.random()}`,
-        number: eh.number || eh.transaction_number || eh.receiptNo || (eh.id ? `TXN-${String(eh.id).slice(0, 8).toUpperCase()}` : "—"),
-        date: eh.date || eh.transaction_date || invDate,
-        time: eh.time || "",
-        mode: eh.mode || eh.payment_ledger?.name || "Cash / Bank",
-        referenceNumber: eh.referenceNumber || eh.remark || eh.reference || "-",
-        recordedBy: eh.recordedBy || "System",
-        amount: Number(eh.amount || 0),
+        id: mergedItem.id || `eh-${Math.random()}`,
+        number: mergedItem.number || mergedItem.transaction_number || mergedItem.receiptNo || (mergedItem.id ? `TXN-${String(mergedItem.id).slice(0, 8).toUpperCase()}` : "—"),
+        date: mergedItem.date || mergedItem.transaction_date || invDate,
+        time: mergedItem.time || "",
+        mode: getPaymentModeDisplay(mergedItem, ledgersMap),
+        referenceNumber: mergedItem.referenceNumber || mergedItem.remark || mergedItem.reference || "-",
+        recordedBy: mergedItem.recordedBy || "System",
+        amount: Number(mergedItem.amount || 0),
+        rawObject: mergedItem,
       });
     });
 
@@ -122,16 +172,17 @@ export default function InvoiceDetailsModal({ invoice, onClose, onRecordPayment 
           number: ap.transaction_number || ap.number || ap.receiptNo || (ap.id ? `TXN-${String(ap.id).slice(0, 8).toUpperCase()}` : "—"),
           date: ap.transaction_date || ap.date || (ap.created_at ? ap.created_at.split("T")[0] : invDate),
           time: ap.time || "",
-          mode: ap.payment_ledger?.name || ap.mode || ap.paymentMode || "Cash",
+          mode: getPaymentModeDisplay(ap, ledgersMap),
           referenceNumber: ap.remark || ap.referenceNumber || ap.refNo || "",
           recordedBy: ap.createdBy || ap.recordedBy || "System",
           amount: Number(ap.amount || 0),
+          rawObject: ap,
         });
       }
     });
 
     return combined;
-  }, [invObj, payments]);
+  }, [invObj, payments, ledgersMap]);
 
   if (!invObj) return null;
 

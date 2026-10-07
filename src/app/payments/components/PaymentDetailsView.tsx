@@ -20,12 +20,13 @@ import {
 } from "react-icons/io5";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
-import { SkeletonDetails } from "@/components/Skeleton";
+import { SkeletonPaymentDetails } from "@/components/Skeleton";
 import { ledgerApi } from "@/lib/api/ledger";
 import { paymentApi } from "@/lib/api/payment";
 import { transactionApi } from "@/lib/api/transaction";
 import { partyApi } from "@/lib/api/party";
 import { invoiceApi } from "@/lib/api/invoice";
+import { getPaymentModeDisplay } from "@/lib/utils/transactionDisplayUtils";
 
 export interface PaymentDetailsViewProps {
   initialPaymentId?: string;
@@ -58,6 +59,16 @@ export default function PaymentDetailsView({
   const [singlePayment, setSinglePayment] = useState<any>(initialPayment);
   const [isLoading, setIsLoading] = useState(!initialPayment);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+  const ledgersMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (ledgers || []).forEach((l: any) => {
+      if (l?.id) {
+        map.set(String(l.id), l);
+      }
+    });
+    return map;
+  }, [ledgers]);
 
   useEffect(() => {
     let isMounted = true;
@@ -207,25 +218,32 @@ export default function PaymentDetailsView({
   const pRemarks = payment ? payment.remark || payment.notes || payment.note || payment.remarks || "" : "";
   const pProofImage = payment ? payment.proof_image || payment.attachmentUrl || payment.imageProof || payment.attachment : null;
 
-  const fromLedgerId = payment?.payment_ledger_id || payment?.fromLedgerId;
-  const toLedgerId = payment?.party_ledger_id || payment?.toLedgerId;
+  const pTypeStr = String(payment?.type || payment?.transactionType || "").toLowerCase();
+  const isJournal = pTypeStr === "journal" || String(payment?.type || "").toLowerCase() === "journal";
+  const isCredit = !isJournal && (pTypeStr === "payment_in" || pTypeStr === "credit" || pTypeStr === "in");
+
+  const fromLedgerId = isCredit
+    ? (payment?.party_ledger_id || payment?.partyLedgerId || payment?.from_ledger_id || payment?.fromLedgerId)
+    : (payment?.from_ledger_id || payment?.fromLedgerId || payment?.payment_ledger_id || payment?.paymentLedgerId);
+  const toLedgerId = isCredit
+    ? (payment?.payment_ledger_id || payment?.paymentLedgerId || payment?.to_ledger_id || payment?.toLedgerId)
+    : (payment?.to_ledger_id || payment?.toLedgerId || payment?.party_ledger_id || payment?.partyLedgerId);
 
   const foundFromLedger: any = ledgers.find((l: any) => String(l.id) === String(fromLedgerId));
   const foundToLedger: any = ledgers.find((l: any) => String(l.id) === String(toLedgerId));
 
-  const fromLedger = payment?.payment_ledger || payment?.fromLedger || foundFromLedger || {};
-  const toLedger = payment?.party_ledger || payment?.party || payment?.toLedger || foundToLedger || {};
+  const fromLedger = isCredit
+    ? (payment?.party_ledger || payment?.partyLedger || payment?.party || payment?.from_ledger || payment?.fromLedger || foundFromLedger || {})
+    : (payment?.from_ledger || payment?.fromLedger || payment?.payment_ledger || payment?.paymentLedger || foundFromLedger || {});
+  const toLedger = isCredit
+    ? (payment?.payment_ledger || payment?.paymentLedger || payment?.to_ledger || payment?.toLedger || foundToLedger || {})
+    : (payment?.to_ledger || payment?.toLedger || payment?.party_ledger || payment?.partyLedger || payment?.party || foundToLedger || {});
 
-  const pTypeStr = String(payment?.type || payment?.transactionType || "").toLowerCase();
+  const fromLedgerName = fromLedger.name || payment?.from_ledger_name || (isCredit ? partyNameStr || "Party" : payment?.payment_ledger_name || "Cash / Bank");
+  const fromLedgerType = String(fromLedger.type || fromLedger.group || (isCredit ? "CUSTOMER" : "BANK")).toUpperCase();
 
-  const isJournal = pTypeStr === "journal" || String(payment?.type || "").toLowerCase() === "journal";
-  const isCredit = !isJournal && (pTypeStr === "payment_in" || pTypeStr === "credit" || pTypeStr === "in");
-
-  const fromLedgerName = fromLedger.name || payment?.payment_ledger_name || (isCredit ? "Bank" : partyNameStr || "Cash");
-  const fromLedgerType = String(fromLedger.type || fromLedger.group || (isCredit ? "BANK" : "CUSTOMER")).toUpperCase();
-
-  const toLedgerName = toLedger.name || toLedger.partyName || partyNameStr || "Ledger";
-  const toLedgerType = String(toLedger.type || toLedger.group || (isCredit ? "CUSTOMER" : "SUPPLIER")).toUpperCase();
+  const toLedgerName = toLedger.name || toLedger.partyName || payment?.to_ledger_name || (isCredit ? "Cash / Bank" : partyNameStr || "Party");
+  const toLedgerType = String(toLedger.type || toLedger.group || (isCredit ? "BANK" : "SUPPLIER")).toUpperCase();
 
   // Find linked invoice if available
   const matchingInvoice = useMemo(() => {
@@ -252,9 +270,7 @@ export default function PaymentDetailsView({
   if (isLoading && !payment) {
     return (
       <PermissionGuard module="Payment">
-        <div className="space-y-5 select-none gi-page pb-12">
-          <SkeletonDetails />
-        </div>
+        <SkeletonPaymentDetails />
       </PermissionGuard>
     );
   }
@@ -286,23 +302,23 @@ export default function PaymentDetailsView({
   }
 
   const amt = Number(payment?.amount || 0);
+  const isNegativeAmt = amt < 0;
+  const absAmt = Math.abs(amt);
 
   // Badge & Color Theme rules
   let badgeText = "PAYMENT OUT";
   let badgeClass = "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50";
   let amountClass = "text-rose-600 dark:text-rose-400";
-  let amountSign = "-";
+  let amountSign = isNegativeAmt ? "-" : (isCredit ? "+" : isJournal ? "+" : "-");
 
   if (isJournal) {
     badgeText = "JOURNAL";
     badgeClass = "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-900/50";
     amountClass = "text-purple-700 dark:text-purple-300";
-    amountSign = "+";
   } else if (isCredit) {
     badgeText = "PAYMENT IN";
     badgeClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50";
     amountClass = "text-emerald-600 dark:text-emerald-400";
-    amountSign = "+";
   }
 
   return (
@@ -368,7 +384,7 @@ export default function PaymentDetailsView({
               {/* Big Amount Banner */}
               <div className="py-2">
                 <span className={`font-mono font-extrabold text-2xl sm:text-3xl md:text-4xl tracking-tight ${amountClass}`}>
-                  {amountSign} ₹{amt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {amountSign} ₹{absAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
@@ -441,7 +457,7 @@ export default function PaymentDetailsView({
 
                 <div className="flex justify-between items-center gap-2">
                   <span className="gi-text-muted">Payment Mode</span>
-                  <span className="font-semibold gi-text-primary capitalize">{payment?.mode || payment?.payment_mode || "Cash"}</span>
+                  <span className="font-semibold gi-text-primary capitalize">{getPaymentModeDisplay(payment, ledgersMap)}</span>
                 </div>
 
                 <div className="flex justify-between items-center gap-2">

@@ -21,13 +21,15 @@ import PermissionGuard from "@/components/PermissionGuard";
 import PaginationControls from "@/components/PaginationControls";
 import { SkeletonBox, SkeletonCard } from "@/components/Skeleton";
 import FilterTabs from "@/components/FilterTabs";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function Parties() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
 
   const [parties, setParties] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -45,7 +47,7 @@ export default function Parties() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      setIsLoading(true);
+      startLoading();
       partyApi.getParties(activeBusiness.id)
         .then((res: any) => {
           const list = Array.isArray(res?.body)
@@ -54,9 +56,10 @@ export default function Parties() {
           setParties(Array.isArray(list) ? list : []);
         })
         .catch(console.error)
-        .finally(() => setIsLoading(false));
+        .finally(() => stopLoading());
     } else {
       setParties([]);
+      stopLoading();
     }
   }, [activeBusiness?.id]);
 
@@ -278,13 +281,12 @@ export default function Parties() {
                       {pType}
                     </span>
                     <p
-                      className={`font-mono font-bold text-xs mt-1 ${
-                        isReceive
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : isPay
+                      className={`font-mono font-bold text-xs mt-1 ${isReceive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : isPay
                           ? "text-rose-600 dark:text-rose-400"
                           : "text-slate-800 dark:text-slate-100"
-                      }`}
+                        }`}
                     >
                       {balance !== 0
                         ? `₹${Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`

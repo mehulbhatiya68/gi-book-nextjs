@@ -27,6 +27,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
+import { SkeletonForm } from "@/components/Skeleton";
 import CustomSelect from "@/components/CustomSelect";
 import { toast } from "react-toastify";
 
@@ -105,12 +106,6 @@ function ReceivedPaymentContent() {
           if (st === "paid") return false;
           const due = Number(inv.balance_due ?? inv.due_amount ?? (Number(inv.amount || 0) - Number(inv.paid_amount || 0)));
           return due > 0;
-        });
-
-        pending.sort((a: any, b: any) => {
-          const dA = new Date(a.created_at || a.invoice_date || a.due_date || 0).getTime();
-          const dB = new Date(b.created_at || b.invoice_date || b.due_date || 0).getTime();
-          return dA - dB;
         });
 
         setUnpaidInvoices(pending);
@@ -521,6 +516,14 @@ function ReceivedPaymentContent() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <PermissionGuard module="Payment">
+        <SkeletonForm />
+      </PermissionGuard>
+    );
+  }
 
   if (isLimitReached) {
     return (

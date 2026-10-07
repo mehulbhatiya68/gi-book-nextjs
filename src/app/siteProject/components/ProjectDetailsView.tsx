@@ -22,7 +22,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
-import { SkeletonDetails } from "@/components/Skeleton";
+import { SkeletonProjectDetails } from "@/components/Skeleton";
 import { siteProjectApi } from "@/lib/api/siteProject";
 
 export default function ProjectDetailsView() {
@@ -86,9 +86,7 @@ export default function ProjectDetailsView() {
   if (isLoading) {
     return (
       <PermissionGuard module="Project">
-        <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-          <SkeletonDetails />
-        </div>
+        <SkeletonProjectDetails />
       </PermissionGuard>
     );
   }

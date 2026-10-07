@@ -28,6 +28,8 @@ import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
 import { SkeletonBox, SkeletonCard, SkeletonStats } from "@/components/Skeleton";
 import { toast } from "react-toastify";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function PaymentsView() {
   const router = useRouter();
@@ -38,7 +40,7 @@ export default function PaymentsView() {
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [parties, setParties] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
 
   const [activeFilter, setActiveFilter] = useState(() => {
     if (rawFilter && ["all", "to_collect", "to_pay"].includes(rawFilter)) {
@@ -61,7 +63,7 @@ export default function PaymentsView() {
 
   const fetchPaymentsData = () => {
     if (activeBusiness?.id) {
-      setIsLoading(true);
+      startLoading();
       Promise.all([
         ledgerApi.getLedgers({ per_page: "all", silentError: true }).catch(() => ({ body: [] })),
         partyApi.getParties(activeBusiness.id).catch(() => ({ body: [] })),
@@ -79,12 +81,12 @@ export default function PaymentsView() {
           setParties(pList);
           setInvoices(iList);
         })
-        .finally(() => setIsLoading(false));
+        .finally(() => stopLoading());
     } else {
       setLedgers([]);
       setParties([]);
       setInvoices([]);
-      setIsLoading(false);
+      stopLoading();
     }
   };
 

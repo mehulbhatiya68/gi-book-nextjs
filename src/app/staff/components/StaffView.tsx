@@ -61,17 +61,20 @@ function getPermissionsSummary(staffPermissions: any): Array<{ module: string; a
   });
 }
 
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
+
 export default function StaffView() {
   const { activeBusiness } = useAuth();
   const router = useRouter();
   const { hasPermission } = useAuth();
   const [staffList, setStaffList] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
   const [selectedStaffDetail, setSelectedStaffDetail] = useState<any>(null);
   const [showDeleteStaffModal, setShowDeleteStaffModal] = useState(false);
 
   const loadStaff = () => {
-    setIsLoading(true);
+    startLoading();
     staffApi
       .getStaff({ per_page: "all" })
       .then((res: any) => {
@@ -82,7 +85,7 @@ export default function StaffView() {
         console.error("Failed to load staff members:", err);
         setStaffList([]);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => stopLoading());
   };
 
   useEffect(() => {
@@ -304,8 +307,8 @@ export default function StaffView() {
                         <td className="py-3 px-4 text-center">
                           <span
                             className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isActive
-                                ? "gi-badge-success"
-                                : "gi-surface-secondary border gi-border gi-text-muted"
+                              ? "gi-badge-success"
+                              : "gi-surface-secondary border gi-border gi-text-muted"
                               }`}
                           >
                             {isActive ? "Active" : "Inactive"}
@@ -380,8 +383,8 @@ export default function StaffView() {
                   <span className="gi-text-muted">Account Status:</span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedStaffDetail.status === "active"
-                        ? "gi-badge-success"
-                        : "gi-surface-secondary border gi-border gi-text-muted"
+                      ? "gi-badge-success"
+                      : "gi-surface-secondary border gi-border gi-text-muted"
                       }`}
                   >
                     {selectedStaffDetail.status === "active" ? "Active" : "Inactive"}

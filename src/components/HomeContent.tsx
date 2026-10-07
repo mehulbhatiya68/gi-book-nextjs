@@ -26,6 +26,9 @@ import { getAuthToken } from "@/lib/api/client";
 
 import { SkeletonStats, SkeletonTable, SkeletonGraph } from "@/components/Skeleton";
 
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
+
 const Graph = dynamic(() => import("./Graph"), {
   ssr: false,
   loading: () => <SkeletonGraph />,
@@ -42,8 +45,9 @@ export default function HomeContent({
   const { currentUser, activeBusiness, hasPermission } = useAuth();
 
   const [payments, setPayments] = useState<any[]>(initialPayments || []);
-  const [isLoading, setIsLoading] = useState<boolean>(
-    !(initialPayments?.length || initialDashboardData)
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(
+    !(initialPayments?.length || initialDashboardData),
+    400
   );
   const [dashboardApiResponse, setDashboardApiResponse] = useState<any>(initialDashboardData || null);
   const [isDashboardApiLoading, setIsDashboardApiLoading] = useState(false);
@@ -86,24 +90,23 @@ export default function HomeContent({
     const token = getAuthToken();
     if (token || activeBusiness?.id) {
       if (!payments.length && !dashboardApiResponse && !initialPayments?.length && !initialDashboardData) {
-        setIsLoading(true);
+        startLoading();
         setIsDashboardApiLoading(true);
       }
 
-      transactionApi.getTransactions({ per_page: "all", silentError: true })
+      const p1 = transactionApi.getTransactions({ per_page: "all", silentError: true })
         .then((txRes: any) => {
           const txList = txRes?.body?.transactions || txRes?.body?.data || (Array.isArray(txRes?.body) ? txRes.body : txRes?.transactions || txRes?.data || []);
           setPayments(Array.isArray(txList) ? txList : []);
         })
-        .catch(() => { })
-        .finally(() => setIsLoading(false));
+        .catch(() => { });
 
       const now = new Date();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
       const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const compareMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
 
-      dashboardApi.getDashboard({ month: currentMonth, compare_month: compareMonth }, { silentError: true })
+      const p2 = dashboardApi.getDashboard({ month: currentMonth, compare_month: compareMonth }, { silentError: true })
         .then((dashRes: any) => {
           if (dashRes) setDashboardApiResponse(dashRes);
         })
@@ -117,11 +120,15 @@ export default function HomeContent({
           }
         })
         .finally(() => setIsDashboardApiLoading(false));
+
+      Promise.allSettled([p1, p2]).then(() => {
+        stopLoading();
+      });
     } else {
       setPayments([]);
       setDashboardApiResponse(null);
       setIsDashboardApiLoading(false);
-      setIsLoading(false);
+      stopLoading();
     }
   }, [activeBusiness?.id]);
 
@@ -172,8 +179,9 @@ export default function HomeContent({
 
       const fromType = String(pay.from_ledger?.type || pay.fromLedger?.type || "").toLowerCase().trim();
       const toType = String(pay.to_ledger?.type || pay.toLedger?.type || "").toLowerCase().trim();
+      const partyNameStr = String(pay.party_ledger?.name || pay.party_ledger?.partyName || pay.party?.name || pay.partyName || pay.party_name || "").toLowerCase().trim();
 
-      if (partyType === "company" || fromType === "company" || toType === "company") {
+      if (partyType === "company" || fromType === "company" || toType === "company" || partyNameStr.includes("company")) {
         return false;
       }
 
@@ -195,7 +203,7 @@ export default function HomeContent({
         id: pay.id,
         number: pay.transaction_number || pay.number || (pay.id ? `TXN-${String(pay.id).slice(0, 8).toUpperCase()}` : "—"),
         type: isCredit ? "Payment Received" : "Payment Out",
-        partyName: pay.party_ledger?.name || pay.ledger?.name || pay.party?.partyName || pay.partyName || pay.party_name || "General Ledger",
+        partyName: pay.party_ledger?.name || pay.party_ledger?.partyName || pay.party?.name || pay.party?.partyName || pay.partyName || pay.party_name || pay.ledger?.name || "Party",
         amount,
         date: payDateStr || "N/A",
         status: pay.payment_ledger?.name || pay.mode || "Cash",
@@ -203,13 +211,7 @@ export default function HomeContent({
         isPositive: isCredit,
         rawPay: pay,
       };
-    })
-    .sort((a, b) => {
-      const tA = a.timestamp || (a.date !== "N/A" ? new Date(a.date).getTime() : 0);
-      const tB = b.timestamp || (b.date !== "N/A" ? new Date(b.date).getTime() : 0);
-      return tB - tA;
-    })
-    .slice(0, 5);
+    });
 
   const userName = currentUser?.name?.split(" ")[0] || "User";
 
@@ -305,18 +307,20 @@ export default function HomeContent({
           {isLoading ? (
             <SkeletonGraph />
           ) : (
-            <Graph
-              dashboardData={dashboardApiResponse?.body || dashboardApiResponse}
-              onMonthChange={(newMonth, newCompareMonth) => {
-                setIsDashboardApiLoading(true);
-                dashboardApi.getDashboard({ month: newMonth, compare_month: newCompareMonth || undefined }, { silentError: true })
-                  .then((res: any) => {
-                    setDashboardApiResponse(res);
-                  })
-                  .catch(() => { })
-                  .finally(() => setIsDashboardApiLoading(false));
-              }}
-            />
+            <SmoothTransition>
+              <Graph
+                dashboardData={dashboardApiResponse?.body || dashboardApiResponse}
+                onMonthChange={(newMonth, newCompareMonth) => {
+                  setIsDashboardApiLoading(true);
+                  dashboardApi.getDashboard({ month: newMonth, compare_month: newCompareMonth || undefined }, { silentError: true })
+                    .then((res: any) => {
+                      setDashboardApiResponse(res);
+                    })
+                    .catch(() => { })
+                    .finally(() => setIsDashboardApiLoading(false));
+                }}
+              />
+            </SmoothTransition>
           )}
         </div>
 
@@ -394,95 +398,91 @@ export default function HomeContent({
             </div>
 
             {isLoading ? (
-              <SkeletonTable rows={5} cols={5} />
+              <SkeletonTable rows={4} cols={4} />
             ) : recentTransactions.length === 0 ? (
-              <div className="py-12 text-center gi-text-muted text-xs border gi-border rounded-lg gi-surface-secondary">
-                No recent transactions recorded yet.
-              </div>
+              <SmoothTransition>
+                <div className="py-12 text-center gi-text-muted text-xs border gi-border rounded-lg gi-surface-secondary">
+                  No recent transactions recorded yet.
+                </div>
+              </SmoothTransition>
             ) : (
+              <SmoothTransition>
               <>
-                {/* Desktop Table View */}
-                <div className="hidden sm:block gi-table-container overflow-x-auto">
-                  <table className="w-full text-left gi-table text-xs">
-                    <thead>
-                      <tr>
-                        <th className="p-3">Reference / Party</th>
-                        <th className="p-3">Type</th>
-                        <th className="p-3">Date</th>
-                        <th className="p-3">Linked Invoice</th>
-                        <th className="p-3 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y gi-divider">
-                      {recentTransactions.map((tx) => {
-                        const isCompany = String(tx.partyName || "").toLowerCase().includes("company") || String(tx.type || "").toLowerCase().includes("company");
-                        const txColor = isCompany
-                          ? tx.isPositive
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-emerald-600 dark:text-emerald-400"
-                          : "gi-text-primary";
+                {/* Desktop Table View (Inner Scrollable - 4 items frame) */}
+                <div className="hidden sm:block border gi-divider rounded-xl overflow-hidden shadow-2xs">
+                  <div className="max-h-[230px] overflow-y-auto overflow-x-auto no-scrollbar scrollbar-none" style={{ overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                    <table className="w-full text-left gi-table text-xs">
+                      <thead className="sticky top-0 z-10 gi-surface-secondary shadow-2xs">
+                        <tr>
+                          <th className="p-3">Reference / Party</th>
+                          <th className="p-3">Date</th>
+                          <th className="p-3">Linked Invoice</th>
+                          <th className="p-3 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y gi-divider">
+                        {recentTransactions.map((tx) => {
+                          const txColor = tx.isPositive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400";
+                          const txSign = tx.isPositive ? "+" : "-";
 
-                        const raw = tx.rawPay || {};
-                        const targetInvId = raw.sales_invoice?.id || raw.purchase_invoice?.id || raw.invoice?.id || raw.sales_invoice_id || raw.purchase_invoice_id || raw.invoice_id;
-                        const targetInvNum = raw.sales_invoice?.invoice_number || raw.purchase_invoice?.invoice_number || raw.invoice?.invoice_number || raw.sales_invoice_number || raw.purchase_invoice_number || raw.invoice_number;
+                          const raw = tx.rawPay || {};
+                          const targetInvId = raw.sales_invoice?.id || raw.purchase_invoice?.id || raw.invoice?.id || raw.sales_invoice_id || raw.purchase_invoice_id || raw.invoice_id;
+                          const targetInvNum = raw.sales_invoice?.invoice_number || raw.purchase_invoice?.invoice_number || raw.invoice?.invoice_number || raw.sales_invoice_number || raw.purchase_invoice_number || raw.invoice_number;
 
-                        return (
-                          <tr
-                            key={`pay-${tx.id}`}
-                            onClick={() => {
-                              if (tx.id) {
-                                router.push(`/paymentDetails/${tx.id}?from=/home`);
-                              } else {
-                                router.push("/paymentHistory");
-                              }
-                            }}
-                            className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
-                          >
-                            <td className="p-3">
-                              <p className="font-bold gi-text-primary">{tx.partyName}</p>
-                              <p className="text-[11px] gi-text-muted font-mono">{tx.number}</p>
-                            </td>
-                            <td className="p-3">
-                              <span className="gi-text-secondary text-xs">
-                                {tx.type}
-                              </span>
-                            </td>
-                            <td className="p-3 gi-text-secondary whitespace-nowrap">{tx.date}</td>
-                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                              {targetInvId ? (
-                                <Link
-                                  href={`/invoiceDetails/${targetInvId}`}
-                                  className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
-                                >
-                                  <span>{targetInvNum || `#${targetInvId}`}</span>
-                                </Link>
-                              ) : targetInvNum ? (
-                                <span className="font-mono text-xs font-medium gi-text-primary">{targetInvNum}</span>
-                              ) : (
-                                <span className="gi-text-muted text-xs">—</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-right font-mono font-bold">
-                              <span className={txColor}>
-                                {isCompany ? (tx.isPositive ? "+" : "-") : ""}₹{Number(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                          return (
+                            <tr
+                              key={`pay-${tx.id}`}
+                              onClick={() => {
+                                if (tx.id) {
+                                  router.push(`/paymentDetails/${tx.id}?from=/home`);
+                                } else {
+                                  router.push("/paymentHistory");
+                                }
+                              }}
+                              className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
+                            >
+                              <td className="p-3">
+                                <p className="font-bold gi-text-primary">{tx.partyName}</p>
+                                <p className="text-[11px] gi-text-muted font-mono">{tx.number}</p>
+                              </td>
+                              <td className="p-3 gi-text-secondary whitespace-nowrap">{tx.date}</td>
+                              <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                {targetInvId ? (
+                                  <Link
+                                    href={`/invoiceDetails/${targetInvId}`}
+                                    className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                                  >
+                                    <span>{targetInvNum || `#${targetInvId}`}</span>
+                                  </Link>
+                                ) : targetInvNum ? (
+                                  <span className="font-mono text-xs font-medium gi-text-primary">{targetInvNum}</span>
+                                ) : (
+                                  <span className="gi-text-muted text-xs">—</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right font-mono font-bold">
+                                <span className={txColor}>
+                                  {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Mobile Touch Cards View */}
-                <div className="block sm:hidden space-y-2.5">
+                {/* Mobile Touch Cards View (Inner Scrollable - 4 items frame) */}
+                <div className="block sm:hidden max-h-[230px] overflow-y-auto space-y-2.5 pr-1 no-scrollbar scrollbar-none" style={{ overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
                   {recentTransactions.map((tx) => {
-                    const isCompany = String(tx.partyName || "").toLowerCase().includes("company") || String(tx.type || "").toLowerCase().includes("company");
-                    const txColor = isCompany
-                      ? tx.isPositive
-                        ? "text-rose-600 dark:text-rose-400"
-                        : "text-emerald-600 dark:text-emerald-400"
-                      : "gi-text-primary";
+                    const txColor = tx.isPositive
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400";
+                    const txSign = tx.isPositive ? "+" : "-";
+
                     return (
                       <div
                         key={`pay-mobile-${tx.id}`}
@@ -504,17 +504,15 @@ export default function HomeContent({
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`font-mono font-bold text-xs ${txColor}`}>
-                            {isCompany ? (tx.isPositive ? "+" : "-") : ""}₹{Number(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </p>
-                          <span className="text-[10px] gi-text-secondary capitalize block mt-0.5">
-                            {tx.type}
-                          </span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </>
+              </SmoothTransition>
             )}
           </div>
         </div>

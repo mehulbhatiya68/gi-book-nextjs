@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
-import { SkeletonDetails } from "@/components/Skeleton";
+import { SkeletonStaffDetails } from "@/components/Skeleton";
 import { staffApi } from "@/lib/api/staff";
 
 function formatPhone(staff: any): string {
@@ -113,9 +113,7 @@ export default function StaffDetailsView() {
   if (isLoading) {
     return (
       <PermissionGuard module="Staff">
-        <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-          <SkeletonDetails />
-        </div>
+        <SkeletonStaffDetails />
       </PermissionGuard>
     );
   }

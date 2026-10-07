@@ -188,7 +188,7 @@ body {
 }
 
 .gi-divider,
-.divide-y.gi-divider > :not([hidden]) ~ :not([hidden]) {
+.divide-y.gi-divider> :not([hidden])~ :not([hidden]) {
   border-color: var(--gi-divider) !important;
   border-top-color: var(--gi-divider) !important;
   border-bottom-color: var(--gi-divider) !important;
@@ -1072,6 +1072,7 @@ select::placeholder {
 
 /* ── Mobile portrait horizontal scroll prevention (< 768px) ── */
 @media (max-width: 767px) {
+
   body,
   .gi-page,
   main {
@@ -1225,9 +1226,11 @@ select::placeholder {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
@@ -1251,32 +1254,72 @@ select::placeholder {
   line-height: 1;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   white-space: nowrap;
   shrink: 0;
   user-select: none;
 }
+
 .gi-back-btn:hover {
   background: var(--gi-surface-secondary, #F9FAFB);
   color: var(--gi-primary, #7f56d9);
 }
+
 .gi-back-btn:active {
   transform: scale(0.95);
 }
+
 .gi-back-btn svg {
   font-size: 1.15rem;
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
+
 .gi-back-btn:hover svg {
   transform: translateX(-2px);
 }
+
 /* Hide text label on mobile — icon only */
 @media (max-width: 639px) {
   .gi-back-btn .gi-back-label {
     display: none;
   }
+
   .gi-back-btn {
     padding: 0.45rem 0.6rem;
   }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+@media (max-width: 639px) {
+  .gi-back-btn .gi-back-label {
+    display: none;
+  }
+
+  .gi-back-btn {
+    padding: 0.45rem 0.6rem;
+  }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }

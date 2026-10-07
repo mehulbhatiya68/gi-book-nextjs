@@ -28,12 +28,15 @@ import PaginationControls from "@/components/PaginationControls";
 import { SkeletonBox, SkeletonCard } from "@/components/Skeleton";
 import { ItemScannerModal } from "@/components/ItemScannerModal";
 
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
+
 export default function Items() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
 
   const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -52,7 +55,7 @@ export default function Items() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      setIsLoading(true);
+      startLoading();
       itemApi.getItems({ silentError: true })
         .then((res: any) => {
           const list = Array.isArray(res?.body)
@@ -61,9 +64,10 @@ export default function Items() {
           setItems(Array.isArray(list) ? list : []);
         })
         .catch(console.error)
-        .finally(() => setIsLoading(false));
+        .finally(() => stopLoading());
     } else {
       setItems([]);
+      stopLoading();
     }
   }, [activeBusiness?.id]);
 

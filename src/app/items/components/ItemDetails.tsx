@@ -25,7 +25,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
-import { SkeletonDetails } from "@/components/Skeleton";
+import { SkeletonItemDetails } from "@/components/Skeleton";
 import { itemApi } from "@/lib/api/item";
 import { invoiceApi } from "@/lib/api/invoice";
 import { ItemQrHelper } from "@/lib/utils/itemQrHelper";
@@ -274,9 +274,7 @@ export default function ItemDetails() {
   if (loading) {
     return (
       <PermissionGuard module="Item Transaction">
-        <div className="gi-page max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-          <SkeletonDetails />
-        </div>
+        <SkeletonItemDetails />
       </PermissionGuard>
     );
   }

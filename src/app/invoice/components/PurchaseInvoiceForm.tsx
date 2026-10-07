@@ -30,6 +30,7 @@ import QuantityStepper from "@/components/QuantityStepper";
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
+import { SkeletonForm } from "@/components/Skeleton";
 
 export default function PurchaseInvoiceForm() {
   const router = useRouter();
@@ -935,6 +936,10 @@ export default function PurchaseInvoiceForm() {
     }
   };
 
+  if (isLoadingEdit) {
+    return <SkeletonForm />;
+  }
+
   if (isInvoiceLimitReached) {
     return (
       <LimitReachedView
@@ -1453,10 +1458,10 @@ export default function PurchaseInvoiceForm() {
                     setIsPaid(!isPaid);
                   }}
                   className={`relative w-9 h-5 rounded-full transition cursor-pointer ${isPaid
-                      ? "bg-emerald-600"
-                      : !isEditMode && isPaymentLimitReached
-                        ? "bg-slate-200 dark:bg-zinc-800 opacity-50 cursor-not-allowed"
-                        : "bg-slate-300 dark:bg-zinc-700"
+                    ? "bg-emerald-600"
+                    : !isEditMode && isPaymentLimitReached
+                      ? "bg-slate-200 dark:bg-zinc-800 opacity-50 cursor-not-allowed"
+                      : "bg-slate-300 dark:bg-zinc-700"
                     }`}
                 >
                   <span
@@ -1776,11 +1781,10 @@ export default function PurchaseInvoiceForm() {
                           </p>
 
                           {/* GST Tax Rate Badge */}
-                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
-                            gstText.includes("Exempt") || gstText === "None"
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider inline-flex items-center gap-1 ${gstText.includes("Exempt") || gstText === "None"
                               ? "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700"
                               : "bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
-                          }`}>
+                            }`}>
                             <IoReceiptOutline className="text-xs shrink-0" />
                             <span>{gstText}</span>
                             <span className="opacity-75 font-normal">({taxType})</span>
@@ -1796,13 +1800,12 @@ export default function PurchaseInvoiceForm() {
                               <span>Service</span>
                             </span>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border ${
-                              isOutOfStock
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border ${isOutOfStock
                                 ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                                 : isLowStock
                                   ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                                   : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                            }`}>
+                              }`}>
                               <IoCubeOutline className="text-xs shrink-0" />
                               <span>
                                 {isOutOfStock ? `Out of Stock (0 ${unit})` : `Stock: ${stockQty} ${unit}`}
@@ -1914,7 +1917,7 @@ export default function PurchaseInvoiceForm() {
             {/* Locked Item Type Notice */}
             <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
               <span className="font-bold shrink-0">Type: Product</span>
-              <span className="text-[11px] text-amber-700 dark:text-amber-400">(Service items cannot be created from invoice creation)</span>
+              <span className="text-[11px] text-amber-700 dark:text-amber-400">(Service items cannot be created from Purchase invoice creation)</span>
             </div>
 
             <div className="space-y-3">

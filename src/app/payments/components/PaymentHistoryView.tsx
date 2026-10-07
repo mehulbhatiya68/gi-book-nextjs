@@ -30,6 +30,8 @@ import { siteProjectApi } from "@/lib/api/siteProject";
 import { invoiceApi } from "@/lib/api/invoice";
 import AddLedgerTransactionForm from "@/app/ledgers/components/AddLedgerTransactionForm";
 import { toast } from "react-toastify";
+import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
+import SmoothTransition from "@/components/SmoothTransition";
 
 export default function PaymentHistoryView() {
   const { activeBusiness, hasPermission } = useAuth();
@@ -39,7 +41,7 @@ export default function PaymentHistoryView() {
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [siteProjects, setSiteProjects] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,11 +58,11 @@ export default function PaymentHistoryView() {
       setLedgerTransactions([]);
       setLedgers([]);
       setSiteProjects([]);
-      setIsLoading(false);
+      stopLoading();
       return;
     }
 
-    setIsLoading(true);
+    startLoading();
     try {
       const [ledgersRes, siteProjectsRes, invoicesRes]: [any, any, any] = await Promise.all([
         ledgerApi.getLedgers({ per_page: "all", silentError: true }).catch(() => ({ body: [] })),
@@ -126,7 +128,7 @@ export default function PaymentHistoryView() {
       console.warn("Error fetching transactions data:", err);
       setLedgerTransactions([]);
     } finally {
-      setIsLoading(false);
+      stopLoading();
     }
   };
 
@@ -250,12 +252,26 @@ export default function PaymentHistoryView() {
     const query = searchQuery.toLowerCase().trim();
 
     return nonJournalTransactions.filter((tx) => {
-      const fromId = tx.payment_ledger_id || tx.fromLedgerId;
-      const toId = tx.party_ledger_id || tx.toLedgerId;
-      const fromName = getLedgerName(fromId).toLowerCase();
-      const toName = getLedgerName(toId).toLowerCase();
-      const remarkStr = (tx.remark || "").toLowerCase();
       const typeStr = (tx.type || tx.transactionType || "").toLowerCase();
+      const isPayIn = typeStr === "payment_in" || typeStr === "credit";
+      const fromId = isPayIn
+        ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
+        : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
+      const toId = isPayIn
+        ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
+        : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
+
+      const fromName = (
+        isPayIn
+          ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
+          : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId))
+      ).toLowerCase();
+      const toName = (
+        isPayIn
+          ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
+          : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId))
+      ).toLowerCase();
+      const remarkStr = (tx.remark || "").toLowerCase();
       const projId = tx.project_id || tx.siteProjectId;
 
       const matchesFilter =
@@ -332,9 +348,9 @@ export default function PaymentHistoryView() {
 
   return (
     <PermissionGuard module="Ledger">
-      <div className="space-y-5 select-none gi-page">
+      <div className="flex-1 min-h-0 flex flex-col gap-4 select-none gi-page">
         {/* Page Heading (No Quick Action Buttons, No Settings Icon) */}
-        <div className="flex items-center justify-between border-b gi-divider pb-3">
+        <div className="shrink-0 flex items-center justify-between border-b gi-divider pb-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -352,7 +368,7 @@ export default function PaymentHistoryView() {
         </div>
 
         {/* Summary KPI Row (Desktop Only) */}
-        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="hidden md:grid shrink-0 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
@@ -413,7 +429,7 @@ export default function PaymentHistoryView() {
         </div>
 
         {/* Filter Controls & Search */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-0 bg-transparent border-none shadow-none">
+        <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-0 bg-transparent border-none shadow-none">
           {/* Search Bar (Desktop Only) - Left on Desktop */}
           <div className="hidden md:block relative w-full sm:w-64 order-1">
             <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 gi-text-muted text-sm" />
@@ -441,7 +457,7 @@ export default function PaymentHistoryView() {
         </div>
 
         {/* Mobile Cards View (< 768px) — MATCHES IMAGE 2 */}
-        <div className="block md:hidden space-y-2.5">
+        <div className="block md:hidden space-y-2.5 shrink-0">
           {isLoading ? (
             <SkeletonCard count={5} />
           ) : sortedTransactions.length === 0 ? (
@@ -457,7 +473,7 @@ export default function PaymentHistoryView() {
               const dateStr = dObj && !isNaN(dObj.getTime())
                 ? `${String(dObj.getDate()).padStart(2, "0")}-${String(dObj.getMonth() + 1).padStart(2, "0")}-${dObj.getFullYear()}`
                 : txDate || "—";
-              
+
               const typeStr = String(tx.type || tx.transactionType || "").toLowerCase();
               const isIn = typeStr === "payment_in" || typeStr === "credit" || typeStr === "in";
               const targetId = tx.payment_id || tx.paymentId || tx.id;
@@ -522,7 +538,7 @@ export default function PaymentHistoryView() {
         </div>
 
         {/* Desktop Data Table (>= 768px) */}
-        <div className="hidden md:block gi-table-container shadow-xs">
+        <div className="hidden md:flex flex-1 min-h-0 flex-col gi-table-container shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs gi-table border-collapse">
               <thead>
@@ -585,15 +601,25 @@ export default function PaymentHistoryView() {
                   </tr>
                 ) : (
                   sortedTransactions.map((tx) => {
-                    const fromId = tx.payment_ledger_id || tx.fromLedgerId;
-                    const toId = tx.party_ledger_id || tx.toLedgerId;
+                    const typeStr = (tx.type || tx.transactionType || "").toLowerCase();
+                    const isPayIn = typeStr === "payment_in" || typeStr === "credit";
+                    const fromId = isPayIn
+                      ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
+                      : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
+                    const toId = isPayIn
+                      ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
+                      : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
                     const dateStr = tx.transaction_date || tx.date || "—";
                     const projId = tx.project_id || tx.siteProjectId;
                     const proofImg = tx.proof_image || tx.imageProof;
                     const linkedInv = getLinkedInvoice(tx);
                     const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
-                    const fromName = getLedgerName(fromId);
-                    const toName = getLedgerName(toId);
+                    const fromName = isPayIn
+                      ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
+                      : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId));
+                    const toName = isPayIn
+                      ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
+                      : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId));
 
                     return (
                       <tr
@@ -617,7 +643,7 @@ export default function PaymentHistoryView() {
                           {getTypeBadge(tx.type || tx.transactionType)}
                         </td>
                         <td className="py-2 px-2 text-right font-mono font-bold gi-text-primary text-xs whitespace-nowrap">
-                          ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          {Number(tx.amount || 0) < 0 ? "-" : (tx.type === "payment_in" || tx.type === "credit" ? "+" : "")}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-2 px-2 max-w-[110px] truncate" title={projId ? getSiteName(projId) : ""}>
                           {projId ? (
