@@ -271,14 +271,10 @@ export default function LedgersView() {
               const nStr = String(l.name || "").toLowerCase().trim();
               const isComp = tStr === "company" || tStr === "capital" || tStr === "equity" || nStr.includes("company");
 
-              const balColor = isComp
-                ? currentBal < 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : currentBal > 0
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "gi-text-primary"
-                : "gi-text-primary";
-              const signPrefix = isComp ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : "";
+              const balColor = currentBal === 0
+                ? "gi-text-primary"
+                : (currentBal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400");
+              const signPrefix = currentBal > 0 ? "+" : currentBal < 0 ? "-" : "";
 
               return (
                 <div
@@ -373,24 +369,15 @@ export default function LedgersView() {
                     const tStr = String(l.type || l.group || l.category || "").toLowerCase().trim();
                     const nStr = String(l.name || "").toLowerCase().trim();
                     const isComp = tStr === "company" || tStr === "capital" || tStr === "equity" || nStr.includes("company");
+                    const balColor = currentBal === 0
+                      ? "gi-text-primary"
+                      : (currentBal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400");
+                    const signPrefix = currentBal > 0 ? "+" : currentBal < 0 ? "-" : "";
 
-                    const balColor = isComp
-                      ? currentBal < 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : currentBal > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "gi-text-primary"
-                      : "gi-text-primary";
-                    const signPrefix = isComp ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : "";
-
-                    const openBalColor = isComp
-                      ? openBal < 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : openBal > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "gi-text-secondary"
-                      : "gi-text-secondary";
-                    const openSignPrefix = isComp ? (openBal > 0 ? "+" : openBal < 0 ? "-" : "") : "";
+                    const openBalColor = openBal === 0
+                      ? "gi-text-secondary"
+                      : (openBal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400");
+                    const openSignPrefix = openBal > 0 ? "+" : openBal < 0 ? "-" : "";
 
                     return (
                       <tr
@@ -443,7 +430,7 @@ export default function LedgersView() {
                                   const isParty = tStr === "customer" || tStr === "supplier";
                                   router.push(isParty ? `/addParty?id=${l.id}&from=/ledgers` : `/addLedger?id=${l.id}&from=/ledgers`);
                                 }}
-                                className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                                className="gi-action-btn-edit"
                                 title="Edit Ledger"
                               >
                                 <IoPencilOutline className="text-sm" />
@@ -454,7 +441,7 @@ export default function LedgersView() {
                               <button
                                 type="button"
                                 onClick={() => setLedgerToDelete(l)}
-                                className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                className="gi-action-btn-delete"
                                 title="Delete Ledger"
                               >
                                 <IoTrashOutline className="text-sm" />
@@ -502,7 +489,7 @@ export default function LedgersView() {
                   type="button"
                   onClick={handleDeleteLedger}
                   disabled={isDeleting}
-                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
+                  className="gi-btn-delete disabled:opacity-50"
                 >
                   {isDeleting ? "Deleting..." : "Delete Ledger"}
                 </button>

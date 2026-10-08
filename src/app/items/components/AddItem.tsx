@@ -47,7 +47,7 @@ export default function AddItem() {
 
   // Form Fields
   const [itemName, setItemName] = useState("");
-  const [hsnCode, setHsnCode] = useState("");
+  const [description, setDescription] = useState("");
   const [itemType, setItemType] = useState<"Product" | "Service">("Product");
   const [unit, setUnit] = useState("PCS");
 
@@ -65,6 +65,31 @@ export default function AddItem() {
   const [lowStockAlert, setLowStockAlert] = useState(false);
   const [lowStockAt, setLowStockAt] = useState("");
 
+  const [hsnCode, setHsnCode] = useState("");
+  const [hsnOptions, setHsnOptions] = useState<Array<{ value: string; label: string }>>([]);
+
+  useEffect(() => {
+    itemApi.getHsnSacCodes({ silentError: true })
+      .then((res: any) => {
+        const bodyObj = res?.body || res;
+        const list = bodyObj?.hsn_sac_codes || bodyObj?.hsnSacCodes || bodyObj?.data || (Array.isArray(bodyObj) ? bodyObj : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const opts = list.map((item: any) => {
+            const code = String(item.code || item.hsn_code || item.hsn || item.sac_code || "").trim();
+            const desc = String(item.description || item.details || "").trim();
+            const typeStr = String(item.type || "").toUpperCase().trim();
+            const typeTag = typeStr ? ` [${typeStr}]` : "";
+            return {
+              value: code,
+              label: desc ? `${code}${typeTag} - ${desc}` : `${code}${typeTag}`,
+            };
+          }).filter((opt: any) => Boolean(opt.value));
+          setHsnOptions(opts);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Add Stock Details Collapsible State & Date
   const [isStockDetailsOpen, setIsStockDetailsOpen] = useState(false);
   const [stockDate, setStockDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -73,8 +98,8 @@ export default function AddItem() {
     const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase();
     const newCode = `ITM-${randomHex}`;
     setItemCode(newCode);
+    setDesktopItemCode(newCode);
     setIsStockDetailsOpen(true);
-    toast.success(`Generated barcode: ${newCode}`);
   };
 
   const handleScanSuccess = (scannedCode: string, matchedItem?: any) => {
@@ -108,7 +133,6 @@ export default function AddItem() {
       }
 
       if (name) setItemName(name);
-      if (hsn) setHsnCode(hsn);
       setItemType(type);
       if (u) setUnit(u);
       if (sPrice !== "") setSalesPrice(String(sPrice));
@@ -235,44 +259,7 @@ export default function AddItem() {
     }
   };
 
-  // HSN / SAC Autocomplete State (HsnSacCodeModel)
-  const [hsnOptions, setHsnOptions] = useState<Array<{ id: string; code: string; type: string; description: string }>>([]);
-  const [isSearchingHsn, setIsSearchingHsn] = useState(false);
-  const [showHsnDropdown, setShowHsnDropdown] = useState(false);
 
-  // Fetch initial HSN/SAC list on mount
-  useEffect(() => {
-    setIsSearchingHsn(true);
-    itemApi.getHsnSacCodes({ per_page: "all", silentError: true })
-      .then((res: any) => {
-        const list =
-          res?.body?.hsn_sac_codes ||
-          res?.body?.hsnSacCodes ||
-          (Array.isArray(res?.body) ? res.body : []) ||
-          res?.hsn_sac_codes ||
-          res?.data ||
-          [];
-
-        const parsedList = (Array.isArray(list) ? list : []).map((item: any) => ({
-          id: String(item.id || item.code || Math.random()),
-          code: String(item.code || ""),
-          type: String(item.type || "HSN").toUpperCase(),
-          description: String(item.description || ""),
-        }));
-
-        setHsnOptions(parsedList);
-      })
-      .catch(() => setHsnOptions([]))
-      .finally(() => setIsSearchingHsn(false));
-  }, []);
-
-  const filteredHsnOptions = useMemo(() => {
-    if (!hsnCode.trim()) return hsnOptions;
-    const q = hsnCode.toLowerCase().trim();
-    return hsnOptions.filter(
-      (opt) => opt.code.toLowerCase().includes(q) || opt.description.toLowerCase().includes(q)
-    );
-  }, [hsnOptions, hsnCode]);
 
   const gstOptions = useMemo(() => {
     const base = ["None", "GST @ 5%", "GST @ 18%", "GST @ 28%"];
@@ -300,7 +287,7 @@ export default function AddItem() {
       .then((existing: any) => {
         if (existing && existing.id) {
           const name = existing.item_name || existing.itemName || existing.name || "";
-          const hsn = existing.hsn_code || existing.hsn_sac_code || existing.hsnCode || existing.hsn || "";
+          const desc = existing.description || "";
           const type = (existing.item_type || existing.itemType || "product").toLowerCase() === "service" ? "Service" : "Product";
           const u = existing.unit || "PCS";
           const sPrice = existing.sales_price ?? existing.salesPrice ?? "";
@@ -325,8 +312,9 @@ export default function AddItem() {
             }
           }
 
+          const existingHsn = existing.hsn || existing.hsn_code || existing.hsn_sac_code || existing.hsnCode || "";
           setItemName(name);
-          setHsnCode(hsn);
+          setDescription(desc);
           setItemType(type);
           setUnit(u);
           setSalesPrice(sPrice !== "" ? String(sPrice) : "");
@@ -335,6 +323,7 @@ export default function AddItem() {
           setPurchaseTaxType(existing.purchase_price_tax_type === "without_tax" || existing.purchaseTaxType === "Without Tax" ? "Without Tax" : "With Tax");
           setGst(gstStr);
           setItemCode(code);
+          if (existingHsn) setHsnCode(String(existingHsn));
           setStockQuantity(qty !== "" ? String(qty) : "");
           setLowStockAlert(Boolean(Number(minAlert) > 0 || existing.lowStockAlert));
           setLowStockAt(minAlert !== "" ? String(minAlert) : "");
@@ -374,20 +363,23 @@ export default function AddItem() {
 
     if (itemCode.trim()) {
       apiPayload.item_code = itemCode.trim();
+      apiPayload.qr_code = itemCode.trim();
+    }
+
+    if (description.trim()) {
+      apiPayload.description = description.trim();
     }
 
     if (hsnCode.trim()) {
-      apiPayload.hsn_sac_code = hsnCode.trim();
+      apiPayload.hsn = hsnCode.trim();
     }
 
     if (itemType === "Product") {
-      apiPayload.min_stock_alert = (isStockDetailsOpen && lowStockAlert) ? (Number(lowStockAt) || 0) : 0;
-      if (!editId) {
+      if (editId) {
+        apiPayload.min_stock_alert = lowStockAlert ? (Number(lowStockAt) || 0) : 0;
+      } else {
+        apiPayload.min_stock_alert = (isStockDetailsOpen && lowStockAlert) ? (Number(lowStockAt) || 0) : 0;
         apiPayload.current_stock = isStockDetailsOpen ? (Number(stockQuantity) || 0) : 0;
-        if (stockDate) {
-          apiPayload.as_of_date = stockDate;
-          apiPayload.stock_date = stockDate;
-        }
       }
     } else {
       apiPayload.min_stock_alert = 0;
@@ -457,83 +449,85 @@ export default function AddItem() {
 
         <form onSubmit={handleSaveItem} className="space-y-6">
 
-          {/* Desktop Screen Only: Enter Item Code to Fetch Data / Upload Barcode Image */}
-          <div className="hidden sm:flex p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border border-indigo-500/25 dark:border-indigo-500/35 shadow-sm items-center justify-between gap-5">
-            <div className="flex items-center gap-3.5 shrink-0">
-              <div className="h-11 w-11 rounded-2xl bg-indigo-600/15 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl shrink-0 shadow-inner">
-                <IoBarcodeOutline />
+          {/* Desktop Screen Only: Enter Item Code to Fetch Data / Upload Barcode Image (Create Mode Only) */}
+          {!editId && (
+            <div className="hidden sm:flex p-5 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-indigo-950/40 border border-indigo-500/25 dark:border-indigo-500/35 shadow-sm items-center justify-between gap-5">
+              <div className="flex items-center gap-3.5 shrink-0">
+                <div className="h-11 w-11 rounded-2xl bg-indigo-600/15 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                  <IoBarcodeOutline />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold gi-text-primary tracking-tight">Enter item code to fetch data</h3>
+                  <p className="text-[11px] gi-text-secondary">Enter item code or upload barcode image to fetch item details</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold gi-text-primary tracking-tight">Enter item code to fetch data</h3>
-                <p className="text-[11px] gi-text-secondary">Enter item code or upload barcode image to fetch item details</p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2.5 max-w-lg w-full">
-              <div className="relative flex-1">
-                <IoSearchOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none" />
+              <div className="flex items-center gap-2.5 max-w-lg w-full">
+                <div className="relative flex-1">
+                  <IoSearchOutline className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none" />
+                  <input
+                    type="text"
+                    value={desktopItemCode}
+                    onChange={(e) => setDesktopItemCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        fetchItemByCode(desktopItemCode);
+                      }
+                    }}
+                    placeholder="ENTER ITEM CODE..."
+                    className="w-full h-10 pl-9 pr-8 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs font-mono uppercase focus:outline-none focus:border-indigo-500 shadow-2xs tracking-wider font-semibold placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:font-normal"
+                  />
+                  {desktopItemCode && (
+                    <button
+                      type="button"
+                      onClick={() => setDesktopItemCode("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer p-0.5 rounded-full"
+                      title="Clear"
+                    >
+                      <IoClose className="text-base" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => fetchItemByCode(desktopItemCode)}
+                  disabled={isFetchingByCode || !desktopItemCode.trim()}
+                  className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isFetchingByCode ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <IoSearchOutline className="text-base" />
+                      <span>Fetch Data</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Upload Image Option */}
+                <button
+                  type="button"
+                  onClick={() => desktopFileInputRef.current?.click()}
+                  disabled={isFetchingByCode}
+                  className="h-10 px-3.5 rounded-xl gi-btn-secondary border gi-divider text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-2xs hover:border-emerald-500 shrink-0"
+                  title="Upload image to scan barcode / QR code"
+                >
+                  <IoCloudUploadOutline className="text-base text-emerald-500" />
+                  <span>Upload Image</span>
+                </button>
                 <input
-                  type="text"
-                  value={desktopItemCode}
-                  onChange={(e) => setDesktopItemCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      fetchItemByCode(desktopItemCode);
-                    }
-                  }}
-                  placeholder="ENTER ITEM CODE..."
-                  className="w-full h-10 pl-9 pr-8 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs font-mono uppercase focus:outline-none focus:border-indigo-500 shadow-2xs tracking-wider font-semibold placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:font-normal"
+                  type="file"
+                  ref={desktopFileInputRef}
+                  accept="image/*"
+                  onChange={handleDesktopImageUpload}
+                  className="hidden"
                 />
-                {desktopItemCode && (
-                  <button
-                    type="button"
-                    onClick={() => setDesktopItemCode("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer p-0.5 rounded-full"
-                    title="Clear"
-                  >
-                    <IoClose className="text-base" />
-                  </button>
-                )}
+                <div id="desktop-file-reader" className="hidden" />
               </div>
-
-              <button
-                type="button"
-                onClick={() => fetchItemByCode(desktopItemCode)}
-                disabled={isFetchingByCode || !desktopItemCode.trim()}
-                className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isFetchingByCode ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <IoSearchOutline className="text-base" />
-                    <span>Fetch Data</span>
-                  </>
-                )}
-              </button>
-
-              {/* Upload Image Option */}
-              <button
-                type="button"
-                onClick={() => desktopFileInputRef.current?.click()}
-                disabled={isFetchingByCode}
-                className="h-10 px-3.5 rounded-xl gi-btn-secondary border gi-divider text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-2xs hover:border-emerald-500 shrink-0"
-                title="Upload image to scan barcode / QR code"
-              >
-                <IoCloudUploadOutline className="text-base text-emerald-500" />
-                <span>Upload Image</span>
-              </button>
-              <input
-                type="file"
-                ref={desktopFileInputRef}
-                accept="image/*"
-                onChange={handleDesktopImageUpload}
-                className="hidden"
-              />
-              <div id="desktop-file-reader" className="hidden" />
             </div>
-          </div>
+          )}
 
           {/* SECTION 1: Item Basic Details */}
           <div className="gi-card p-3.5 sm:p-6 rounded-2xl shadow-xs space-y-3 sm:space-y-4">
@@ -563,7 +557,7 @@ export default function AddItem() {
                 />
               </div>
 
-              {/* Item Type */}
+              {/* Item Category */}
               <div>
                 <label className="block text-xs font-semibold gi-text-secondary mb-1">
                   Item Category
@@ -590,66 +584,6 @@ export default function AddItem() {
                 </div>
               </div>
 
-              {/* HSN / SAC Code with API Search Dropdown */}
-              <div className="relative">
-                <label className="block text-xs font-semibold gi-text-secondary mb-1">
-                  HSN / SAC Code
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={hsnCode}
-                    onChange={(e) => {
-                      setHsnCode(e.target.value);
-                      setShowHsnDropdown(true);
-                    }}
-                    onFocus={() => setShowHsnDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowHsnDropdown(false), 200)}
-                    placeholder="e.g. 8517 or type to search HSN/SAC"
-                    className="w-full h-9 sm:h-10 px-3.5 pr-8 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs sm:text-sm focus:outline-none focus:border-indigo-500 transition shadow-2xs font-mono"
-                  />
-                  {isSearchingHsn && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin pointer-events-none" />
-                  )}
-                </div>
-
-                {/* HSN/SAC Search Results Dropdown with Code & Description from API */}
-                {showHsnDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg z-30 max-h-52 overflow-y-auto divide-y gi-divider">
-                    {isSearchingHsn && hsnOptions.length === 0 ? (
-                      <div className="p-3 text-center text-xs gi-text-muted">Loading HSN/SAC codes...</div>
-                    ) : filteredHsnOptions.length === 0 ? (
-                      <div className="p-3 text-center text-xs gi-text-muted">No HSN/SAC code matched. You can type custom code.</div>
-                    ) : (
-                      filteredHsnOptions.map((opt) => (
-                        <button
-                          key={opt.id + opt.code}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setHsnCode(opt.code);
-                            setShowHsnDropdown(false);
-                          }}
-                          className="w-full text-left p-2.5 hover:bg-[var(--gi-hover)] transition flex items-start justify-between gap-2 text-xs cursor-pointer"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400 text-xs">{opt.code}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                {opt.type}
-                              </span>
-                            </div>
-                            {opt.description && (
-                              <p className="text-[11px] gi-text-secondary mt-0.5 leading-tight hidden sm:block">{opt.description}</p>
-                            )}
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Measurement Unit */}
               {itemType === "Product" && (
                 <div>
@@ -663,6 +597,20 @@ export default function AddItem() {
                   />
                 </div>
               )}
+
+              {/* Item Description */}
+              <div className="md:col-span-3">
+                <label className="block text-xs font-semibold gi-text-secondary mb-1">
+                  Item Description / Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter product specifications, notes, or details..."
+                  className="w-full px-3.5 py-2 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs sm:text-sm focus:outline-none focus:border-indigo-500 transition shadow-2xs resize-none"
+                />
+              </div>
             </div>
           </div>
 
@@ -710,11 +658,35 @@ export default function AddItem() {
                 </label>
                 <SelectInput value={gst} onChange={setGst} options={gstOptions} />
               </div>
+
+              {/* HSN / SAC Code */}
+              <div>
+                <label className="block text-xs font-semibold gi-text-secondary mb-1">
+                  HSN / SAC Code
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="add-item-hsn-options"
+                    value={hsnCode}
+                    onChange={(e) => setHsnCode(e.target.value)}
+                    placeholder="Enter or select HSN code..."
+                    className="w-full h-9 sm:h-10 px-3.5 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs sm:text-sm focus:outline-none focus:border-indigo-500 transition shadow-2xs font-mono"
+                  />
+                  <datalist id="add-item-hsn-options">
+                    {hsnOptions.map((opt, idx) => (
+                      <option key={`${opt.value}-${idx}`} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* SECTION 3: Add Stock Details */}
-          {itemType === "Product" && (
+          {/* SECTION 3: Add Stock Details (Only in Create Mode) */}
+          {itemType === "Product" && !editId && (
             <div className="gi-card rounded-2xl shadow-xs border gi-divider overflow-hidden transition-all">
               {/* Section Toggle Header */}
               <div
@@ -815,9 +787,8 @@ export default function AddItem() {
                           <button
                             type="button"
                             onClick={handleGenerateBarcode}
-                            disabled={Boolean(itemCode.trim())}
-                            className="h-9 sm:h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100"
-                            title={itemCode.trim() ? "Barcode already generated" : "Generate unique barcode"}
+                            className="h-9 sm:h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs shrink-0 cursor-pointer"
+                            title="Generate unique barcode"
                           >
                             <IoSparklesOutline className="text-sm" />
                             <span>Generate Barcode</span>

@@ -541,7 +541,7 @@ export default function LedgerTransactionsView() {
                 const isToComp = String(toType || "").toLowerCase().includes("company") || String(toName || "").toLowerCase().includes("company");
                 const isCompTx = isFromComp || isToComp;
                 const txSign = isCompTx ? (isFromComp ? "-" : "+") : (TransactionDisplayUtils.isPaymentIn(tx) ? "+" : TransactionDisplayUtils.isPaymentOut(tx) ? "-" : "");
-                const txColor = isCompTx ? (isFromComp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400") : "gi-text-primary";
+                const txColor = isCompTx ? (isFromComp ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "gi-text-primary";
                 const linkedInv = getLinkedInvoice(tx);
                 const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
 
@@ -606,10 +606,28 @@ export default function LedgerTransactionsView() {
                               e.stopPropagation();
                               setTxToDelete(tx);
                             }}
-                            className="p-1 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                            className="gi-action-btn-delete"
                             title="Delete Unlinked Transaction"
                           >
                             <IoTrashOutline className="text-sm" />
+                          </button>
+                        )}
+                        {hasPermission("Ledger", "Edit") && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const tType = String(tx.type || tx.transactionType || "").toLowerCase();
+                              if (tType === "payment_in" || tType === "payment_out" || tType === "credit" || tType === "debit") {
+                                router.push(`/payment/receivedPayment?id=${tx.id}&type=${tType === "payment_in" || tType === "credit" ? "credit" : "debit"}`);
+                              } else {
+                                router.push(`/addLedgerTransaction?id=${tx.id}`);
+                              }
+                            }}
+                            className="gi-action-btn-edit"
+                            title="Edit Transaction"
+                          >
+                            <IoPencilOutline className="text-sm" />
                           </button>
                         )}
                       </div>
@@ -659,7 +677,7 @@ export default function LedgerTransactionsView() {
                     );
                   })}
                   <th className="py-2 px-2">Remark</th>
-                  <th className="py-2 px-2 text-center">Actions</th>
+                  <th className="py-2 px-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y gi-divider">
@@ -711,7 +729,7 @@ export default function LedgerTransactionsView() {
                     const isCompTx = isFromComp || isToComp;
                     const rawAmt = Number(tx.amount || 0);
                     const txSign = rawAmt < 0 ? "-" : (isCompTx ? (isFromComp ? "-" : "+") : (TransactionDisplayUtils.isPaymentIn(tx) ? "+" : TransactionDisplayUtils.isPaymentOut(tx) ? "-" : ""));
-                    const txColor = isCompTx ? (isFromComp ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400") : "gi-text-primary";
+                    const txColor = isCompTx ? (isFromComp ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400") : "gi-text-primary";
 
                     return (
                       <tr
@@ -725,10 +743,10 @@ export default function LedgerTransactionsView() {
                         <td className="py-2 px-2 font-semibold gi-text-primary whitespace-nowrap">
                           {dateStr}
                         </td>
-                        <td className={`py-2 px-2 font-semibold max-w-[130px] truncate ${isFromComp ? "text-emerald-600 dark:text-emerald-400" : "gi-text-primary"}`} title={fromName}>
+                        <td className="py-2 px-2 font-semibold max-w-[130px] truncate gi-text-primary" title={fromName}>
                           {fromName}
                         </td>
-                        <td className={`py-2 px-2 font-semibold max-w-[130px] truncate ${isToComp ? "text-rose-600 dark:text-rose-400" : "gi-text-primary"}`} title={toName}>
+                        <td className="py-2 px-2 font-semibold max-w-[130px] truncate gi-text-primary" title={toName}>
                           {toName}
                         </td>
                         <td className="py-2 px-2 shrink-0">
@@ -767,17 +785,28 @@ export default function LedgerTransactionsView() {
                         <td className="py-2 px-2 text-xs max-w-xs truncate gi-text-secondary" title={tx.remark || ""}>
                           {tx.remark || "—"}
                         </td>
-                        <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
+                        <td className="py-2 px-2 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
 
                             {proofImg && (
                               <button
                                 type="button"
                                 onClick={() => setSelectedProofImg(proofImg)}
-                                className="p-1.5 rounded-md gi-badge-success transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                className="p-1.5 rounded-md gi-badge-info text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
                                 title="View Proof"
                               >
                                 <IoEyeOutline className="text-xs" />
+                              </button>
+                            )}
+
+                            {isUnlinked && hasPermission("Ledger", "Delete") && (
+                              <button
+                                type="button"
+                                onClick={() => setTxToDelete(tx)}
+                                className="gi-action-btn-delete"
+                                title="Delete Unlinked Transaction"
+                              >
+                                <IoTrashOutline className="text-sm" />
                               </button>
                             )}
 
@@ -793,21 +822,10 @@ export default function LedgerTransactionsView() {
                                     router.push(`/addLedgerTransaction?id=${tx.id}`);
                                   }
                                 }}
-                                className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                                className="gi-action-btn-edit"
                                 title="Edit Transaction"
                               >
                                 <IoPencilOutline className="text-sm" />
-                              </button>
-                            )}
-
-                            {isUnlinked && hasPermission("Ledger", "Delete") && (
-                              <button
-                                type="button"
-                                onClick={() => setTxToDelete(tx)}
-                                className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                                title="Delete Unlinked Transaction"
-                              >
-                                <IoTrashOutline className="text-sm" />
                               </button>
                             )}
                           </div>

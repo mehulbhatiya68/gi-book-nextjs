@@ -24,6 +24,7 @@ import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
 import CustomSelect from "@/components/CustomSelect";
+import PaymentSettlementChecklistModal from "@/components/PaymentSettlementChecklistModal";
 
 interface AddLedgerTransactionFormProps {
   txToEdit?: any;
@@ -123,6 +124,18 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [checklistData, setChecklistData] = useState<{
+    isOpen: boolean;
+    amount: number;
+    partyName: string;
+    paymentType: "credit" | "debit";
+  }>({
+    isOpen: false,
+    amount: 0,
+    partyName: "",
+    paymentType: "credit",
+  });
 
   useEffect(() => {
     if (txToEdit) {
@@ -321,11 +334,13 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
         toast.success("Transaction recorded successfully!");
       }
 
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, "/ledgerTransactions");
-      }
+      setChecklistData({
+        isOpen: true,
+        amount: amt,
+        partyName: selectedPartyLedger?.name || "Party Account",
+        paymentType: determinedType === "payment_in" ? "credit" : "debit",
+      });
+      setIsSubmitting(false);
     } catch (err: any) {
       console.error("Error saving ledger transaction:", err);
       const msg = err.message || "Failed to save transaction. Please try again.";
@@ -596,6 +611,31 @@ export default function AddLedgerTransactionForm({ txToEdit, onSuccess, onCancel
             </button>
           </div>
         </form>
+
+        {/* Payment Settlement Checklist Animation Modal */}
+        <PaymentSettlementChecklistModal
+          isOpen={checklistData.isOpen}
+          amount={checklistData.amount}
+          partyName={checklistData.partyName}
+          paymentType={checklistData.paymentType}
+          settledInvoices={[]}
+          onComplete={() => {
+            setChecklistData((prev) => ({ ...prev, isOpen: false }));
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, "/ledgerTransactions");
+            }
+          }}
+          onClose={() => {
+            setChecklistData((prev) => ({ ...prev, isOpen: false }));
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              handleSmartBack(router, pathname, searchParams ? searchParams.get("from") : null, "/ledgerTransactions");
+            }
+          }}
+        />
       </div>
     </PermissionGuard>
   );

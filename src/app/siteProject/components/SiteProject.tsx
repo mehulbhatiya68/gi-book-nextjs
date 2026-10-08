@@ -470,7 +470,7 @@ export default function SiteProject() {
                               <Link href={editUrl}>
                                 <button
                                   type="button"
-                                  className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] text-indigo-600 dark:text-indigo-400 transition cursor-pointer"
+                                  className="gi-action-btn-edit"
                                   title="Edit Item"
                                 >
                                   <IoPencilOutline className="text-base" />
@@ -482,7 +482,7 @@ export default function SiteProject() {
                               <button
                                 type="button"
                                 onClick={() => setItemToDelete(item)}
-                                className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] text-rose-600 dark:text-rose-400 transition cursor-pointer"
+                                className="gi-action-btn-delete"
                                 title="Delete Item"
                               >
                                 <IoTrashOutline className="text-base" />
@@ -542,7 +542,7 @@ export default function SiteProject() {
                     type="button"
                     disabled={isDeleting}
                     onClick={handleDeleteItem}
-                    className="flex-1 py-2 rounded-lg gi-btn-danger text-xs font-semibold transition cursor-pointer shadow-xs"
+                    className="gi-btn-delete flex-1 disabled:opacity-50"
                   >
                     {isDeleting ? "Deleting..." : "Yes, Delete"}
                   </button>

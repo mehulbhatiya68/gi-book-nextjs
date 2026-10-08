@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { IoClose, IoChevronDown, IoCubeOutline, IoSaveOutline } from "react-icons/io5";
+import { IoClose, IoChevronDown, IoCubeOutline, IoSaveOutline, IoSparklesOutline, IoBarcodeOutline } from "react-icons/io5";
 import { toast } from "react-toastify";
 import { itemApi } from "@/lib/api/item";
 import LimitReachedView from "@/components/LimitReachedView";
@@ -20,6 +20,7 @@ export function CreateItemModal({
   const { isLimitReached, used, quota, featureName } = useLimitCheck("item", false);
 
   const [itemName, setItemName] = useState("");
+  const [description, setDescription] = useState("");
   const [itemCode, setItemCode] = useState("");
   const [hsnCode, setHsnCode] = useState("");
   const [itemType, setItemType] = useState<"Product" | "Service">("Product");
@@ -29,45 +30,37 @@ export function CreateItemModal({
   const [gst, setGst] = useState("None");
   const [openingStock, setOpeningStock] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [hsnOptions, setHsnOptions] = useState<Array<{ value: string; label: string }>>([]);
 
-  // HSN Autocomplete
-  const [hsnOptions, setHsnOptions] = useState<Array<{ id: string; code: string; type: string; description: string }>>([]);
-  const [isSearchingHsn, setIsSearchingHsn] = useState(false);
-  const [showHsnDropdown, setShowHsnDropdown] = useState(false);
+  const handleGenerateBarcode = () => {
+    const randomHex = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newCode = `ITM-${randomHex}`;
+    setItemCode(newCode);
+    toast.success(`Generated barcode: ${newCode}`);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
-    setIsSearchingHsn(true);
-    itemApi.getHsnSacCodes({ per_page: "all", silentError: true })
+    itemApi.getHsnSacCodes({ silentError: true })
       .then((res: any) => {
-        const list =
-          res?.body?.hsn_sac_codes ||
-          res?.body?.hsnSacCodes ||
-          (Array.isArray(res?.body) ? res.body : []) ||
-          res?.hsn_sac_codes ||
-          res?.data ||
-          [];
-
-        const parsedList = (Array.isArray(list) ? list : []).map((item: any) => ({
-          id: String(item.id || item.code || Math.random()),
-          code: String(item.code || ""),
-          type: String(item.type || "HSN").toUpperCase(),
-          description: String(item.description || ""),
-        }));
-
-        setHsnOptions(parsedList);
+        const bodyObj = res?.body || res;
+        const list = bodyObj?.hsn_sac_codes || bodyObj?.hsnSacCodes || bodyObj?.data || (Array.isArray(bodyObj) ? bodyObj : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const opts = list.map((item: any) => {
+            const code = String(item.code || item.hsn_code || item.hsn || item.sac_code || "").trim();
+            const desc = String(item.description || item.details || "").trim();
+            const typeStr = String(item.type || "").toUpperCase().trim();
+            const typeTag = typeStr ? ` [${typeStr}]` : "";
+            return {
+              value: code,
+              label: desc ? `${code}${typeTag} - ${desc}` : `${code}${typeTag}`,
+            };
+          }).filter((opt: any) => Boolean(opt.value));
+          setHsnOptions(opts);
+        }
       })
-      .catch(() => setHsnOptions([]))
-      .finally(() => setIsSearchingHsn(false));
+      .catch(() => {});
   }, [isOpen]);
-
-  const filteredHsnOptions = useMemo(() => {
-    if (!hsnCode.trim()) return hsnOptions;
-    const q = hsnCode.toLowerCase().trim();
-    return hsnOptions.filter(
-      (opt) => opt.code.toLowerCase().includes(q) || opt.description.toLowerCase().includes(q)
-    );
-  }, [hsnOptions, hsnCode]);
 
   if (!isOpen) return null;
 
@@ -92,10 +85,15 @@ export function CreateItemModal({
 
     if (itemCode.trim()) {
       apiPayload.item_code = itemCode.trim();
+      apiPayload.qr_code = itemCode.trim();
+    }
+
+    if (description.trim()) {
+      apiPayload.description = description.trim();
     }
 
     if (hsnCode.trim()) {
-      apiPayload.hsn_sac_code = hsnCode.trim();
+      apiPayload.hsn = hsnCode.trim();
     }
 
     setIsSaving(true);
@@ -103,13 +101,21 @@ export function CreateItemModal({
       const res: any = await itemApi.createItem(apiPayload);
       const createdObj = res?.body?.item || res?.body?.data || res?.body || res?.data || res?.item || res;
       
+      const selectedHsn = apiPayload.hsn || createdObj?.hsn || createdObj?.hsn_code || createdObj?.hsn_sac_code || hsnCode.trim() || "";
+
       const normalizedCreated = {
         ...apiPayload,
         ...(createdObj || {}),
         id: createdObj?.id || Math.random(),
         itemName: apiPayload.item_name,
         itemCode: apiPayload.item_code || "",
-        hsnCode: apiPayload.hsn_sac_code || "",
+        item_code: apiPayload.item_code || "",
+        qrCode: apiPayload.qr_code || apiPayload.item_code || "",
+        qr_code: apiPayload.qr_code || apiPayload.item_code || "",
+        hsn: selectedHsn,
+        hsn_code: selectedHsn,
+        hsn_sac_code: selectedHsn,
+        hsnCode: selectedHsn,
         purchasePrice: apiPayload.purchase_price,
         salesPrice: apiPayload.sales_price,
         unit: apiPayload.unit,
@@ -122,6 +128,7 @@ export function CreateItemModal({
       
       // Reset form fields
       setItemName("");
+      setDescription("");
       setItemCode("");
       setHsnCode("");
       setSalesPrice("");
@@ -200,43 +207,42 @@ export function CreateItemModal({
             </div>
           </div>
 
-          {/* HSN Code & Item Code */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* HSN / SAC Code with API Dropdown */}
+          {/* Item Code / Barcode */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold gi-text-secondary">Item Code / Barcode / SKU</label>
+              <button
+                type="button"
+                onClick={handleGenerateBarcode}
+                className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <IoSparklesOutline className="text-xs" />
+                <span>Generate Barcode</span>
+              </button>
+            </div>
             <div className="relative">
-              <label className="block text-xs font-semibold gi-text-secondary mb-1">HSN / SAC Code</label>
-              <div className="relative">
-                <input type="text" value={hsnCode} onChange={(e) => { setHsnCode(e.target.value); setShowHsnDropdown(true); }} onFocus={() => setShowHsnDropdown(true)} onBlur={() => setTimeout(() => setShowHsnDropdown(false), 200)} placeholder="Search HSN/SAC" className="w-full h-9 px-3 pr-7 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-mono" />
-                <IoChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
-              </div>
-
-              {showHsnDropdown && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-lg z-30 max-h-48 overflow-y-auto divide-y gi-divider">
-                  {isSearchingHsn && hsnOptions.length === 0 ? (
-                    <div className="p-3 text-center text-xs gi-text-muted">Loading HSN codes...</div>
-                  ) : filteredHsnOptions.length === 0 ? (
-                    <div className="p-3 text-center text-xs gi-text-muted">No HSN matched. Type custom code.</div>
-                  ) : (
-                    filteredHsnOptions.map((opt) => (
-                      <button key={opt.id + opt.code} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setHsnCode(opt.code); setShowHsnDropdown(false); }} className="w-full text-left p-2 hover:bg-[var(--gi-hover)] transition flex items-start justify-between gap-2 text-xs cursor-pointer">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400 text-xs">{opt.code}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-[10px] font-bold text-slate-600 dark:text-slate-300">{opt.type}</span>
-                          </div>
-                          {opt.description && <p className="text-[11px] gi-text-secondary mt-0.5 leading-tight truncate">{opt.description}</p>}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+              <input
+                type="text"
+                value={itemCode}
+                onChange={(e) => setItemCode(e.target.value.toUpperCase())}
+                placeholder="e.g. ITM-001"
+                className="w-full h-9 px-3 pr-24 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-mono uppercase"
+              />
+              <button
+                type="button"
+                onClick={handleGenerateBarcode}
+                className="absolute right-1 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] cursor-pointer transition shadow-2xs flex items-center gap-1"
+              >
+                <IoSparklesOutline className="text-xs" />
+                <span>Generate</span>
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold gi-text-secondary mb-1">Item Code / SKU</label>
-              <input type="text" value={itemCode} onChange={(e) => setItemCode(e.target.value)} placeholder="e.g. ITM-001" className="w-full h-9 px-3 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-mono" />
-            </div>
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-semibold gi-text-secondary mb-1">Item Description / Notes</label>
+            <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Product specifications, details..." className="w-full px-3 py-2 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 resize-none font-medium" />
           </div>
 
           {/* Pricing */}
@@ -271,6 +277,26 @@ export function CreateItemModal({
                 <input type="number" min="0" step="any" value={openingStock} onChange={(e) => setOpeningStock(e.target.value)} placeholder="0" className="w-full h-9 px-3 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-mono" />
               </div>
             )}
+          </div>
+
+          {/* HSN / SAC Code */}
+          <div>
+            <label className="block text-xs font-semibold gi-text-secondary mb-1">HSN / SAC Code</label>
+            <input
+              type="text"
+              list="create-item-hsn-options"
+              value={hsnCode}
+              onChange={(e) => setHsnCode(e.target.value)}
+              placeholder="Enter or select HSN code..."
+              className="w-full h-9 px-3 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-mono"
+            />
+            <datalist id="create-item-hsn-options">
+              {hsnOptions.map((opt, idx) => (
+                <option key={`${opt.value}-${idx}`} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </datalist>
           </div>
 
           {/* Action Buttons */}

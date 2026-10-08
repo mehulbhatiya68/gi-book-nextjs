@@ -95,7 +95,6 @@ export function ItemBarcodeTagModal({
       navigator.clipboard.writeText(barcodeValue);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success("Barcode copied to clipboard!");
     }
   };
 

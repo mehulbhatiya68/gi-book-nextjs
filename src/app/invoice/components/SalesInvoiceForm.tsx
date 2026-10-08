@@ -89,6 +89,30 @@ export default function SalesInvoiceForm() {
   const [newItemGst, setNewItemGst] = useState("None");
   const [newItemHsn, setNewItemHsn] = useState("");
   const [newItemStock, setNewItemStock] = useState("");
+  const [newItemHsnOptions, setNewItemHsnOptions] = useState<Array<{ value: string; label: string }>>([]);
+
+  useEffect(() => {
+    if (!showCreateItemModal) return;
+    itemApi.getHsnSacCodes({ silentError: true })
+      .then((res: any) => {
+        const bodyObj = res?.body || res;
+        const list = bodyObj?.hsn_sac_codes || bodyObj?.hsnSacCodes || bodyObj?.data || (Array.isArray(bodyObj) ? bodyObj : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const opts = list.map((item: any) => {
+            const code = String(item.code || item.hsn_code || item.hsn || item.sac_code || "").trim();
+            const desc = String(item.description || item.details || "").trim();
+            const typeStr = String(item.type || "").toUpperCase().trim();
+            const typeTag = typeStr ? ` [${typeStr}]` : "";
+            return {
+              value: code,
+              label: desc ? `${code}${typeTag} - ${desc}` : `${code}${typeTag}`,
+            };
+          }).filter((opt: any) => Boolean(opt.value));
+          setNewItemHsnOptions(opts);
+        }
+      })
+      .catch(() => {});
+  }, [showCreateItemModal]);
 
   const resetNewItemForm = () => {
     setNewItemName("");
@@ -681,8 +705,7 @@ export default function SalesInvoiceForm() {
       };
 
       if (newItemHsn.trim()) {
-        payload.hsn_sac_code = newItemHsn.trim();
-        payload.hsn_code = newItemHsn.trim();
+        payload.hsn = newItemHsn.trim();
       }
 
       const res: any = await itemApi.createItem(payload);
@@ -708,7 +731,9 @@ export default function SalesInvoiceForm() {
         sales_price_tax_type: newItemSalesTaxType === "With Tax" ? "with_tax" : "without_tax",
         current_stock: newItemType === "service" ? 0 : Number(created?.current_stock ?? newItemStock ?? 0),
         stockQuantity: newItemType === "service" ? 0 : Number(created?.current_stock ?? newItemStock ?? 0),
+        hsn: newItemHsn.trim(),
         hsn_code: newItemHsn.trim(),
+        hsn_sac_code: newItemHsn.trim(),
         hsnCode: newItemHsn.trim(),
       };
 
@@ -2209,11 +2234,19 @@ export default function SalesInvoiceForm() {
                   </label>
                   <input
                     type="text"
+                    list="sales-quick-hsn-options"
                     value={newItemHsn}
                     onChange={(e) => setNewItemHsn(e.target.value)}
                     placeholder="e.g. 8471"
-                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
                   />
+                  <datalist id="sales-quick-hsn-options">
+                    {newItemHsnOptions.map((opt, idx) => (
+                      <option key={`${opt.value}-${idx}`} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </datalist>
                 </div>
                 {newItemType === "product" && (
                   <div>

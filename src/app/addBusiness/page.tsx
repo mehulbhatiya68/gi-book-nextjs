@@ -15,6 +15,7 @@ import {
 } from "react-icons/io5";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { showToast } from "@/components/CustomToast";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { compressImageFile } from "@/utils/imageCompressor";
@@ -146,7 +147,10 @@ export default function AddBusiness() {
         });
       }
 
-      toast.success("Business profile created successfully!");
+      showToast.success({
+        title: "Business Created",
+        message: "Business profile created successfully!"
+      });
       router.replace("/home");
     } catch (err: any) {
       if (err?.isEmailUnverified || err?.message?.toLowerCase().includes("verify your email")) {

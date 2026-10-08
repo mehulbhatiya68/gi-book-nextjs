@@ -1323,3 +1323,213 @@ select::placeholder {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* ==========================================================================
+   CUSTOM GLASSMORPHISM TOAST NOTIFICATION STYLES
+   ========================================================================== */
+.Toastify__toast-container {
+  padding: 12px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.Toastify__toast {
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  font-family: inherit !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.25), 0 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  color: #0f172a !important;
+  margin-bottom: 12px !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.dark .Toastify__toast,
+[data-theme="dark"] .Toastify__toast {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.Toastify__toast--success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.Toastify__toast--error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.Toastify__toast--warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.Toastify__toast--info {
+  border-left: 4px solid #06b6d4 !important;
+}
+
+.Toastify__toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.Toastify__close-button {
+  color: #94a3b8 !important;
+  opacity: 0.7 !important;
+  align-self: flex-start !important;
+  margin-top: 2px !important;
+  transition: opacity 0.15s ease, color 0.15s ease !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+  color: #0f172a !important;
+}
+
+.dark .Toastify__close-button:hover {
+  color: #f8fafc !important;
+}
+
+.Toastify__progress-bar {
+  height: 3px !important;
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+}
+
+.Toastify__progress-bar--success {
+  background: linear-gradient(90deg, #10b981, #34d399) !important;
+}
+
+.Toastify__progress-bar--error {
+  background: linear-gradient(90deg, #ef4444, #f87171) !important;
+}
+
+.Toastify__progress-bar--warning {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+}
+
+.Toastify__progress-bar--info {
+  background: linear-gradient(90deg, #06b6d4, #38bdf8) !important;
+}
+
+/* ==========================================================================
+   UNIFIED ACTION BUTTONS & DELETE BUTTON DESIGN SYSTEM
+   ========================================================================== */
+
+/* 1. Quick Action Delete Icon Button (Lists & Cards) */
+.gi-action-btn-delete,
+.gi-btn-delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #e11d48;
+  background-color: rgba(254, 226, 226, 0.7);
+  border: 1px solid rgba(252, 165, 165, 0.6);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.gi-action-btn-delete:hover,
+.gi-btn-delete-icon:hover {
+  color: #be123c;
+  background-color: #fecdd3;
+  border-color: #fda4af;
+  transform: translateY(-1px);
+}
+
+.dark .gi-action-btn-delete,
+.dark .gi-btn-delete-icon,
+[data-theme="dark"] .gi-action-btn-delete,
+[data-theme="dark"] .gi-btn-delete-icon {
+  color: #fb7185;
+  background-color: rgba(136, 19, 55, 0.35);
+  border-color: rgba(159, 18, 57, 0.5);
+}
+
+.dark .gi-action-btn-delete:hover,
+.dark .gi-btn-delete-icon:hover,
+[data-theme="dark"] .gi-action-btn-delete:hover,
+[data-theme="dark"] .gi-btn-delete-icon:hover {
+  color: #fda4af;
+  background-color: rgba(159, 18, 57, 0.6);
+  border-color: rgba(225, 29, 72, 0.7);
+}
+
+/* 2. Quick Action Edit Icon Button (Lists & Cards — matching gi-badge-info) */
+.gi-action-btn-edit,
+.gi-btn-edit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--gi-info, #2563EB) !important;
+  background-color: var(--gi-info-bg, #EFF6FF) !important;
+  border: 1px solid var(--gi-info-border, #BFDBFE) !important;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.gi-action-btn-edit:hover,
+.gi-btn-edit-icon:hover {
+  color: #1d4ed8 !important;
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+  transform: translateY(-1px);
+}
+
+.dark .gi-action-btn-edit,
+.dark .gi-btn-edit-icon,
+[data-theme="dark"] .gi-action-btn-edit,
+[data-theme="dark"] .gi-btn-edit-icon {
+  color: #60a5fa !important;
+  background-color: rgba(30, 58, 138, 0.35) !important;
+  border-color: rgba(30, 64, 175, 0.5) !important;
+}
+
+.dark .gi-action-btn-edit:hover,
+.dark .gi-btn-edit-icon:hover,
+[data-theme="dark"] .gi-action-btn-edit:hover,
+[data-theme="dark"] .gi-btn-edit-icon:hover {
+  color: #93c5fd !important;
+  background-color: rgba(30, 64, 175, 0.6) !important;
+  border-color: rgba(37, 99, 235, 0.7) !important;
+}
+
+/* 3. Full Delete Button (Modals, Forms & Detail Headers) */
+.gi-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #e11d48;
+  border: 1px solid #be123c;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.gi-btn-delete:hover {
+  background-color: #be123c;
+  border-color: #9f1239;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(225, 29, 72, 0.25);
+}
+
+.gi-btn-delete:active {
+  transform: translateY(0);
+}

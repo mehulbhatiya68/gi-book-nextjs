@@ -32,10 +32,27 @@ export const itemApi = {
   },
 
   createItem: (data: ItemPayload) => {
-    return apiClient('/items/store', { method: 'POST', body: data }).catch(async (err: any) => {
+    const {
+      hsn_sac_code,
+      hsn_code,
+      hsn_sac,
+      hsnCode,
+      as_of_date,
+      stock_date,
+      stockDate,
+      asOfDate,
+      ...cleanData
+    } = (data || {}) as any;
+
+    const hsnValue = (data as any)?.hsn || hsn_code || hsn_sac_code || hsnCode;
+    if (hsnValue && typeof hsnValue === 'string' && hsnValue.trim()) {
+      cleanData.hsn = hsnValue.trim();
+    }
+
+    return apiClient('/items/store', { method: 'POST', body: cleanData }).catch(async (err: any) => {
       const msg = String(err?.message || err || '');
-      if (msg.includes('not allowed')) {
-        const { hsn_sac_code, hsn_code, hsn, ...fallbackData } = (data || {}) as any;
+      if (msg.includes('not allowed') || msg.includes('hsn')) {
+        const { hsn, hsn_code, hsn_sac_code, ...fallbackData } = cleanData;
         return apiClient('/items/store', { method: 'POST', body: fallbackData, silentError: true });
       }
       throw err;
@@ -47,11 +64,31 @@ export const itemApi = {
   getItemDetails: (id: string | number) => apiClient(`/items/${id}`),
 
   updateItem: (id: string | number, data: Partial<ItemPayload>) => {
-    const { current_stock, currentStock, stockQuantity, stock, hsn_code, hsn, ...cleanData } = (data || {}) as any;
+    const {
+      current_stock,
+      currentStock,
+      stockQuantity,
+      stock,
+      hsn_sac_code,
+      hsn_code,
+      hsn_sac,
+      hsnCode,
+      as_of_date,
+      stock_date,
+      stockDate,
+      asOfDate,
+      ...cleanData
+    } = (data || {}) as any;
+
+    const hsnValue = (data as any)?.hsn || hsn_code || hsn_sac_code || hsnCode;
+    if (hsnValue && typeof hsnValue === 'string' && hsnValue.trim()) {
+      cleanData.hsn = hsnValue.trim();
+    }
+
     return apiClient(`/items/${id}`, { method: 'PUT', body: cleanData }).catch(async (err: any) => {
       const msg = String(err?.message || err || '');
-      if (msg.includes('not allowed')) {
-        const { hsn_sac_code, ...fallbackData } = cleanData;
+      if (msg.includes('not allowed') || msg.includes('hsn')) {
+        const { hsn, hsn_code, hsn_sac_code, ...fallbackData } = cleanData;
         return apiClient(`/items/${id}`, { method: 'PUT', body: fallbackData, silentError: true });
       }
       throw err;

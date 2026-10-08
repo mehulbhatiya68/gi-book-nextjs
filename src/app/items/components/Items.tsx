@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import {
   IoAdd,
   IoSearch,
@@ -12,6 +13,9 @@ import {
   IoEyeOutline,
   IoBuildOutline,
   IoPencilOutline,
+  IoTrashOutline,
+  IoWarningOutline,
+  IoClose,
   IoArrowUpOutline,
   IoArrowDownOutline,
   IoSwapVerticalOutline,
@@ -42,6 +46,25 @@ export default function Items() {
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      await itemApi.deleteItem(itemToDelete.id);
+      const name = itemToDelete.item_name || itemToDelete.itemName || "Item";
+      toast.success(`"${name}" deleted successfully!`);
+      setItems((prev: any) => prev.filter((i: any) => String(i.id) !== String(itemToDelete.id)));
+      setItemToDelete(null);
+    } catch (err: any) {
+      console.error("Failed to delete item:", err);
+      toast.error(err?.message || "Failed to delete item.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
@@ -112,7 +135,6 @@ export default function Items() {
 
     return items.filter((item: any) => {
       const name = item.item_name || item.itemName || "";
-      const hsn = item.hsn_sac_code || item.hsnCode || "";
       const code = item.item_code || item.itemCode || "";
       const qrCode = item.qr_code || item.qrCode || "";
       const qrPayload = item.qr_payload || item.qrPayload || "";
@@ -121,7 +143,6 @@ export default function Items() {
       const matchesSearch =
         query === "" ||
         name.toLowerCase().includes(query) ||
-        hsn.toLowerCase().includes(query) ||
         code.toLowerCase().includes(query) ||
         qrCode.toLowerCase().includes(query) ||
         qrPayload.toLowerCase().includes(query);
@@ -148,10 +169,6 @@ export default function Items() {
           aVal = (a.item_type || a.itemType || "product").toLowerCase();
           bVal = (b.item_type || b.itemType || "product").toLowerCase();
           break;
-        case "hsnCode":
-          aVal = (a.hsn_sac_code || a.hsnCode || "").toLowerCase();
-          bVal = (b.hsn_sac_code || b.hsnCode || "").toLowerCase();
-          break;
         case "salesPrice":
           aVal = Number(a.sales_price ?? a.salesPrice ?? 0);
           bVal = Number(b.sales_price ?? b.salesPrice ?? 0);
@@ -173,8 +190,6 @@ export default function Items() {
       return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
   }, [filteredItems, sortConfig]);
-
-
 
   return (
     <PermissionGuard module="Item Transaction">
@@ -312,6 +327,7 @@ export default function Items() {
               const purchasePrice = Number(item.purchase_price ?? item.purchasePrice ?? 0);
               const qty = Number(item.current_stock ?? item.stockQuantity ?? 0);
               const unit = item.unit || "PCS";
+              const iType = (item.item_type || item.itemType || "product").toLowerCase();
 
               return (
                 <div
@@ -323,7 +339,7 @@ export default function Items() {
                     <div className="h-11 w-11 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 font-semibold text-base flex items-center justify-center shrink-0">
                       {name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
                         {name}
                       </h3>
@@ -353,6 +369,45 @@ export default function Items() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Mobile Action Buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-dashed border-slate-200 dark:border-zinc-800" onClick={(e) => e.stopPropagation()}>
+                    {hasPermission("Item Transaction", "Update") && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/addItem?id=${item.id}`)}
+                        className="px-2.5 py-1 rounded-lg border gi-border gi-text-secondary text-xs font-medium flex items-center gap-1 hover:bg-[var(--gi-hover)] transition cursor-pointer"
+                        title="Edit Item"
+                      >
+                        <IoPencilOutline className="text-xs" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+
+                    {iType !== "service" && hasPermission("Item Transaction", "Update") && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/adjustStock/${item.id}`)}
+                        className="px-2.5 py-1 rounded-lg gi-badge-info text-xs font-medium flex items-center gap-1 transition cursor-pointer"
+                        title="Adjust Stock"
+                      >
+                        <IoBuildOutline className="text-xs" />
+                        <span>Adjust</span>
+                      </button>
+                    )}
+
+                    {hasPermission("Item Transaction", "Delete") && (
+                      <button
+                        type="button"
+                        onClick={() => setItemToDelete(item)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 text-xs font-medium flex items-center gap-1 hover:bg-rose-100 transition cursor-pointer"
+                        title="Delete Item"
+                      >
+                        <IoTrashOutline className="text-xs" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -368,7 +423,6 @@ export default function Items() {
                   {[
                     { key: "itemName", label: "Item Name", align: "left" },
                     { key: "itemType", label: "Type", align: "left" },
-                    { key: "hsnCode", label: "HSN / SAC", align: "left" },
                     { key: "salesPrice", label: "Sale Price", align: "right" },
                     { key: "purchasePrice", label: "Purchase Price", align: "right" },
                     { key: "stockQuantity", label: "Current Stock", align: "right" },
@@ -402,14 +456,14 @@ export default function Items() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, rIdx) => (
                     <tr key={rIdx}>
-                      <td colSpan={7} className="py-3 px-4">
+                      <td colSpan={6} className="py-3 px-4">
                         <SkeletonBox className="h-5 w-full" />
                       </td>
                     </tr>
                   ))
                 ) : sortedItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center gi-text-muted text-xs">
+                    <td colSpan={6} className="py-12 text-center gi-text-muted text-xs">
                       No inventory items found matching your criteria.
                     </td>
                   </tr>
@@ -418,7 +472,6 @@ export default function Items() {
                     const name = item.item_name || item.itemName || "Item";
                     const iType = (item.item_type || item.itemType || "product").toLowerCase();
                     const isService = iType === "service";
-                    const hsn = item.hsn_sac_code || item.hsnCode || "";
                     const salesPrice = Number(item.sales_price ?? item.salesPrice ?? 0);
                     const purchasePrice = Number(item.purchase_price ?? item.purchasePrice ?? 0);
                     const qty = Number(item.current_stock ?? item.stockQuantity ?? 0);
@@ -439,8 +492,7 @@ export default function Items() {
                             <div className="min-w-0">
                               <p className="gi-mob-primary font-semibold gi-text-primary">{name}</p>
                               <div className="gi-mob-secondary">
-                                {hsn && <span className="font-mono">HSN: {hsn}</span>}
-                                {!isService && <><span className="gi-text-muted">·</span><span className={isLow ? "text-rose-500" : ""}>{qty} {item.unit || "PCS"}</span></>}
+                                {!isService && <span className={isLow ? "text-rose-500" : ""}>{qty} {item.unit || "PCS"}</span>}
                                 {!isService && <><span className="gi-text-muted">·</span><span>₹{salesPrice.toLocaleString("en-IN")}</span></>}
                               </div>
                             </div>
@@ -453,9 +505,6 @@ export default function Items() {
                           >
                             {iType}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono gi-text-muted">
-                          {hsn || "N/A"}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-bold gi-text-primary">
                           ₹{salesPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -474,12 +523,11 @@ export default function Items() {
                         </td>
                         <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
-
                             {hasPermission("Item Transaction", "Update") && (
                               <button
                                 type="button"
                                 onClick={() => router.push(`/addItem?id=${item.id}`)}
-                                className="p-1.5 rounded-md hover:bg-[var(--gi-hover)] gi-text-secondary transition"
+                                className="gi-action-btn-edit"
                                 title="Edit Item"
                               >
                                 <IoPencilOutline className="text-base" />
@@ -490,10 +538,21 @@ export default function Items() {
                               <button
                                 type="button"
                                 onClick={() => router.push(`/adjustStock/${item.id}`)}
-                                className="p-1.5 rounded-md gi-badge-info transition"
+                                className="p-1.5 rounded-md gi-badge-info transition cursor-pointer"
                                 title="Adjust Stock"
                               >
                                 <IoBuildOutline className="text-base" />
+                              </button>
+                            )}
+
+                            {hasPermission("Item Transaction", "Delete") && (
+                              <button
+                                type="button"
+                                onClick={() => setItemToDelete(item)}
+                                className="gi-action-btn-delete"
+                                title="Delete Item"
+                              >
+                                <IoTrashOutline className="text-base" />
                               </button>
                             )}
                           </div>
@@ -506,6 +565,71 @@ export default function Items() {
             </table>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {itemToDelete && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-fadeIn" onClick={() => !isDeleting && setItemToDelete(null)}>
+            <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border gi-border shadow-2xl overflow-hidden p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center text-xl shrink-0">
+                    <IoWarningOutline />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold gi-text-primary tracking-tight">Delete Item</h3>
+                    <p className="text-xs gi-text-secondary">Are you sure you want to delete this item?</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setItemToDelete(null)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer p-1 rounded-lg"
+                >
+                  <IoClose className="text-lg" />
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-800 space-y-1 text-xs">
+                <p className="font-bold gi-text-primary text-sm">
+                  {itemToDelete.item_name || itemToDelete.itemName || "Item"}
+                </p>
+                {itemToDelete.item_code || itemToDelete.itemCode ? (
+                  <p className="font-mono text-slate-500 dark:text-slate-400 text-[11px]">
+                    Code: {itemToDelete.item_code || itemToDelete.itemCode}
+                  </p>
+                ) : null}
+                <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                  Type: <span className="font-semibold uppercase">{itemToDelete.item_type || itemToDelete.itemType || "Product"}</span>
+                </p>
+              </div>
+
+              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium leading-relaxed">
+                This action cannot be undone. Removing this item will remove it from your inventory catalog.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t gi-divider">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setItemToDelete(null)}
+                  className="px-4 py-2 rounded-xl border gi-border text-xs font-semibold gi-text-secondary hover:bg-[var(--gi-hover)] transition cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDelete}
+                  className="gi-btn-delete disabled:opacity-50"
+                >
+                  <IoTrashOutline className="text-sm" />
+                  <span>{isDeleting ? "Deleting..." : "Delete Item"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Item Barcode Scanner Modal */}
         <ItemScannerModal

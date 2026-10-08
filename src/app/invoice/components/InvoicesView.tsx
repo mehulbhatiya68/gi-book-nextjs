@@ -597,7 +597,7 @@ export default function InvoicesView() {
                       {sortConfig.key !== "status" && <IoSwapVerticalOutline className="text-xs text-slate-400 opacity-40 shrink-0" />}
                     </div>
                   </th>
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y gi-divider">
@@ -710,8 +710,8 @@ export default function InvoicesView() {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
                               onClick={(e) => handleViewOnline(inv.id, e)}
@@ -736,7 +736,7 @@ export default function InvoicesView() {
                               }}
                               disabled={deletingId === inv.id}
                               title="Delete Invoice"
-                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition disabled:opacity-50"
+                              className="gi-action-btn-delete disabled:opacity-50"
                             >
                               <IoTrashOutline className="text-base" />
                             </button>
@@ -781,7 +781,7 @@ export default function InvoicesView() {
                 <button
                   type="button"
                   onClick={handleDeleteInvoice}
-                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
+                  className="gi-btn-delete"
                 >
                   Delete Invoice
                 </button>

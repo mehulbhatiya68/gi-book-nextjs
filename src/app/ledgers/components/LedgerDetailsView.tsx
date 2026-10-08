@@ -96,16 +96,18 @@ export default function LedgerDetailsView() {
 
     setIsLoading(true);
     try {
-      const [ledgerRes, partyRes, txRes, invoicesRes, paymentsRes]: [any, any, any, any, any] = await Promise.all([
+      const [ledgerRes, txRes, invoicesRes, paymentsRes]: [any, any, any, any] = await Promise.all([
         ledgerApi.getLedger(idStr).catch(() => null),
-        partyApi.getPartyDetails(idStr).catch(() => null),
         transactionApi.getTransactions({ type: 'ledger', id: idStr, per_page: 'all', silentError: true }).catch(() => ({ body: [] })),
         invoiceApi.getInvoices({ ledger_id: idStr, per_page: 'all', silentError: true }).catch(() => ({ body: [] })),
         paymentApi.getPayments({ party_ledger_id: idStr, silentError: true }).catch(() => ({ body: [] })),
       ]);
 
-      const lData = ledgerRes?.body?.ledger || ledgerRes?.body?.party || ledgerRes?.body?.data || ledgerRes?.ledger || ledgerRes?.party || ledgerRes?.data || ledgerRes?.body
-        || partyRes?.body?.party || partyRes?.body?.ledger || partyRes?.body?.data || partyRes?.party || partyRes?.ledger || partyRes?.data || partyRes?.body;
+      let lData = ledgerRes?.body?.ledger || ledgerRes?.body?.party || ledgerRes?.body?.data || ledgerRes?.ledger || ledgerRes?.party || ledgerRes?.data || ledgerRes?.body;
+      if (!lData) {
+        const partyRes: any = await partyApi.getPartyDetails(idStr).catch(() => null);
+        lData = partyRes?.body?.party || partyRes?.body?.ledger || partyRes?.body?.data || partyRes?.party || partyRes?.ledger || partyRes?.data || partyRes?.body;
+      }
 
       if (lData) {
         lData.name = lData.name || lData.partyName || lData.party_name || lData.title || "Party Ledger";
@@ -282,6 +284,7 @@ export default function LedgerDetailsView() {
   const ledgerName = String(ledger?.name || ledger?.partyName || ledger?.party_name || "").toLowerCase().trim();
   const isCompanyLedger = ["company", "capital", "equity", "company ledger", "company_ledger"].includes(ledgerType) || ledgerName.includes("company") || ledgerName.includes("capital") || ledgerName.includes("equity");
   const isCashBankOrCompany = ["cash", "bank", "company", "capital", "equity", "expense", "expenses", "company ledger", "company_ledger"].includes(ledgerType) || isCompanyLedger;
+  const isPartyLedger = ["customer", "supplier"].includes(ledgerType) || (!isCashBankOrCompany && ledgerType !== "ledger") || (pathname ? pathname.startsWith("/parties") : false);
 
   const activeTab = isCashBankOrCompany
     ? "payments"
@@ -619,7 +622,6 @@ export default function LedgerDetailsView() {
 
       const filename = `${(ledger.name || "ledger").replace(/[^a-z0-9]/gi, "_")}_statement.pdf`;
       await reportsApi.downloadReportPdf("ledger-statement", query, filename);
-      toast.success("Ledger PDF statement downloaded successfully!");
       setIsPdfModalOpen(false);
     } catch (err: any) {
       console.error("Failed to download ledger PDF statement via API:", err);
@@ -696,6 +698,44 @@ export default function LedgerDetailsView() {
 
   const currentBal = Number(ledger.current_balance ?? ledger.closingBalance ?? ledger.opening_balance ?? ledger.openingBalance ?? 0);
   const openBal = Number(ledger.opening_balance ?? ledger.openingBalance ?? 0);
+
+  const getBalanceSign = (bal: number) => {
+    if (bal > 0) return "+";
+    if (bal < 0) return "-";
+    return "";
+  };
+
+  const getBalanceColorClass = (bal: number, lType: string = "", lName: string = "") => {
+    if (bal === 0) return "gi-text-primary";
+    return bal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
+  };
+
+  const getBalancePill = (bal: number, lType: string = "", lName: string = "") => {
+    const isPos = bal > 0;
+    const isNeg = bal < 0;
+    const colorClass = getBalanceColorClass(bal, lType, lName);
+
+    let bgBorderClass = "bg-slate-100 border-slate-200 text-slate-700 dark:bg-zinc-800 dark:border-zinc-700 dark:text-slate-300";
+    if (isPos) {
+      bgBorderClass = "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-900/60";
+    } else if (isNeg) {
+      bgBorderClass = "bg-rose-50 border-rose-200 dark:bg-rose-950/50 dark:border-rose-900/60";
+    }
+
+    const sign = getBalanceSign(bal);
+    const formatted = `${sign}₹${Math.abs(bal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs sm:text-sm font-semibold shadow-2xs ${bgBorderClass}`}>
+        <span className="text-[11px] uppercase tracking-wider font-semibold opacity-75 text-slate-600 dark:text-slate-300">
+          Closing Balance:
+        </span>
+        <span className={`font-mono font-bold ${colorClass}`}>
+          {formatted}
+        </span>
+      </span>
+    );
+  };
 
   return (
     <PermissionGuard module="Ledger">
@@ -805,7 +845,12 @@ export default function LedgerDetailsView() {
         {/* Desktop Page Header & Details Summary (>= 768px) */}
         <div className="hidden md:block">
           <PageHeader
-            title={ledger.name}
+            title={
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span>{ledger.name}</span>
+                {isPartyLedger && getBalancePill(currentBal, ledgerType, ledger.name)}
+              </div>
+            }
             badge={getTypeBadge(ledger.type)}
             backUrl={backUrl}
             actions={
@@ -847,7 +892,7 @@ export default function LedgerDetailsView() {
                   <button
                     type="button"
                     onClick={() => setIsDeleteLedgerOpen(true)}
-                    className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    className="gi-btn-delete"
                     title="Delete Ledger"
                   >
                     <IoTrashOutline className="text-base" />
@@ -858,53 +903,57 @@ export default function LedgerDetailsView() {
             }
           />
 
-          {!isCashBankOrCompany ? (
-            <div className="grid grid-cols-4 gap-4 p-4 rounded-2xl border gi-border gi-card text-xs mb-2">
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Phone Number</span>
-                <span className="font-semibold gi-text-primary text-xs truncate block">{ledger.contact_number || "-"}</span>
+          <div className="space-y-3 mb-2">
+            {!isCashBankOrCompany && (
+              <div className="grid grid-cols-4 gap-4 p-4 rounded-2xl border gi-border gi-card text-xs">
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Phone Number</span>
+                  <span className="font-semibold gi-text-primary text-xs truncate block">{ledger.contact_number || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">GST Number</span>
+                  <span className="font-semibold gi-text-primary text-xs truncate block uppercase">{ledger.gstin || "-"}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Billing Address</span>
+                  <span className="font-semibold gi-text-primary text-xs truncate block">{formatAddress(ledger.billing_address || ledger.address)}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Shipping Address</span>
+                  <span className="font-semibold gi-text-primary text-xs truncate block">{formatAddress(ledger.shipping_address || ledger.address)}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">GST Number</span>
-                <span className="font-semibold gi-text-primary text-xs truncate block uppercase">{ledger.gstin || "-"}</span>
+            )}
+
+            {!isPartyLedger && (
+              <div className="grid grid-cols-4 gap-4 p-4 rounded-2xl border gi-border gi-card text-xs">
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Opening Balance</span>
+                  <span className="font-semibold font-mono gi-text-primary text-xs truncate block">
+                    ₹{printStatementData.openingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Total Debit</span>
+                  <span className="font-semibold font-mono text-xs truncate block text-emerald-600 dark:text-emerald-400">
+                    ₹{printStatementData.totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Total Credit</span>
+                  <span className="font-semibold font-mono text-xs truncate block text-rose-600 dark:text-rose-400">
+                    ₹{printStatementData.totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Current Balance</span>
+                  <span className={`font-semibold font-mono text-xs truncate block ${getBalanceColorClass(currentBal, ledgerType, ledger.name)}`}>
+                    {getBalanceSign(currentBal)}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currentBal < 0 ? "Dr" : currentBal > 0 ? "Cr" : ""}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Billing Address</span>
-                <span className="font-semibold gi-text-primary text-xs truncate block">{formatAddress(ledger.billing_address || ledger.address)}</span>
-              </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Shipping Address</span>
-                <span className="font-semibold gi-text-primary text-xs truncate block">{formatAddress(ledger.shipping_address || ledger.address)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-4 p-4 rounded-2xl border gi-border gi-card text-xs mb-2">
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Opening Balance</span>
-                <span className="font-semibold font-mono gi-text-primary text-xs truncate block">
-                  ₹{printStatementData.openingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Total Debit</span>
-                <span className={`font-semibold font-mono text-xs truncate block ${isCompanyLedger ? "text-emerald-600 dark:text-emerald-400" : "gi-text-primary"}`}>
-                  ₹{printStatementData.totalDebit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Total Credit</span>
-                <span className={`font-semibold font-mono text-xs truncate block ${isCompanyLedger ? "text-rose-600 dark:text-rose-400" : "gi-text-primary"}`}>
-                  ₹{printStatementData.totalCredit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div>
-                <span className="text-[11px] gi-text-muted font-medium block mb-0.5">Current Balance</span>
-                <span className={`font-semibold font-mono text-xs truncate block ${isCompanyLedger ? (currentBal < 0 ? "text-emerald-600 dark:text-emerald-400" : currentBal > 0 ? "text-rose-600 dark:text-rose-400" : "gi-text-primary") : "gi-text-primary"}`}>
-                  {isCompanyLedger ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : ""}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currentBal < 0 ? "Dr" : currentBal > 0 ? "Cr" : ""}
-                </span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Mobile Header Bar (< 768px) */}
@@ -975,10 +1024,8 @@ export default function LedgerDetailsView() {
             </p>
           </div>
 
-          <div className="text-right shrink-0">
-            <div className={`font-mono font-bold text-base ${isCompanyLedger ? (currentBal < 0 ? "text-emerald-600 dark:text-emerald-400" : currentBal > 0 ? "text-rose-600 dark:text-rose-400" : "gi-text-primary") : "gi-text-primary"}`}>
-              {isCompanyLedger ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : ""}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
+          <div className="shrink-0">
+            {getBalancePill(currentBal, ledgerType, ledger.name)}
           </div>
         </div>
 
@@ -1286,7 +1333,7 @@ export default function LedgerDetailsView() {
                                 <button
                                   type="button"
                                   onClick={() => setTxToEdit(tx)}
-                                  className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                                  className="gi-action-btn-edit"
                                   title="Edit Transaction"
                                 >
                                   <IoPencilOutline className="text-sm" />
@@ -1297,7 +1344,7 @@ export default function LedgerDetailsView() {
                                 <button
                                   type="button"
                                   onClick={() => setTxToDelete(tx)}
-                                  className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                  className="gi-action-btn-delete"
                                   title="Delete Transaction"
                                 >
                                   <IoTrashOutline className="text-sm" />

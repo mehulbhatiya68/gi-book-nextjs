@@ -51,11 +51,10 @@ import {
   IoRefreshOutline,
   IoClose,
   IoOpenOutline,
-  IoLogoAndroid,
-  IoLogoApple,
   IoCodeWorkingOutline,
 } from "react-icons/io5";
 import { toast } from "react-toastify";
+import { showToast } from "@/components/CustomToast";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { compressImageFile } from "@/utils/imageCompressor";
@@ -828,12 +827,18 @@ export default function Settings() {
         fetchFullBusinessData(activeBusiness.id);
       }
 
-      alert("Business details updated successfully!");
+      showToast.success({
+        title: "Business Updated",
+        message: "Business details updated successfully!"
+      });
       setBizViewMode("view");
       if (typeof refreshBusinesses === "function") refreshBusinesses();
     } catch (err: any) {
       console.error(err);
-      alert(err?.message || "Failed to update business details");
+      showToast.error({
+        title: "Update Failed",
+        message: err?.message || "Failed to update business details"
+      });
     }
   };
 

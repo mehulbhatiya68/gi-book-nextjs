@@ -319,7 +319,7 @@ export default function StaffView() {
                             <button
                               type="button"
                               onClick={() => router.push(`/addStaff?id=${staff.id}`)}
-                              className="p-1.5 rounded-md gi-badge-info transition"
+                              className="gi-action-btn-edit"
                               title="Edit Staff"
                             >
                               <IoPencilOutline className="text-base" />
@@ -427,7 +427,7 @@ export default function StaffView() {
                 <button
                   type="button"
                   onClick={() => setShowDeleteStaffModal(true)}
-                  className="px-3.5 py-1.5 rounded-lg gi-btn-danger text-xs font-semibold transition cursor-pointer"
+                  className="gi-btn-delete"
                 >
                   Delete Staff
                 </button>
@@ -477,7 +477,7 @@ export default function StaffView() {
                   <button
                     type="button"
                     onClick={confirmDeleteStaff}
-                    className="flex-1 py-2 rounded-lg gi-btn-danger text-xs font-semibold transition cursor-pointer shadow-xs"
+                    className="gi-btn-delete flex-1"
                   >
                     Yes, Delete
                   </button>

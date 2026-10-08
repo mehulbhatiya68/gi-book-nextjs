@@ -46,10 +46,10 @@ const normalizeItem = (raw: any) => {
     ...raw,
     id: raw.id,
     itemName: raw.item_name || raw.itemName || raw.name || "Unnamed Item",
-    itemCode: raw.item_code || raw.itemCode || raw.sku || "",
-    qrCode: raw.qr_code || raw.qrCode || "",
+    itemCode: raw.item_code || raw.itemCode || raw.sku || raw.qr_code || raw.qrCode || "",
+    qrCode: raw.qr_code || raw.qrCode || raw.item_code || raw.itemCode || "",
     qrPayload: raw.qr_payload || raw.qrPayload || ItemQrHelper.encode({ itemId: raw.id, qrCode: raw.qr_code || raw.item_code }),
-    hsnCode: raw.hsn_sac_code || raw.hsnCode || raw.hsn || "",
+    hsnCode: raw.hsn || raw.hsn_code || raw.hsn_sac_code || raw.hsnCode || "",
     itemType: (raw.item_type || raw.itemType || "Product").toLowerCase() === "service" ? "Service" : "Product",
     unit: raw.unit || "PCS",
     salesPrice: sPrice,
@@ -357,10 +357,10 @@ export default function ItemDetails() {
                 <button
                   type="button"
                   onClick={() => setShowDelete(true)}
-                  className="p-2 text-rose-600 dark:text-rose-400 hover:bg-[var(--gi-hover)] rounded-full transition cursor-pointer"
+                  className="gi-action-btn-delete"
                   title="Delete Item"
                 >
-                  <IoTrashOutline className="text-xl" />
+                  <IoTrashOutline className="text-lg" />
                 </button>
               )}
             </div>
@@ -387,7 +387,7 @@ export default function ItemDetails() {
                   Item Code
                 </span>
                 <span className="font-semibold gi-text-primary text-xs block">
-                  {item.itemCode || item.hsnCode || "001"}
+                  {item.itemCode || item.qrCode || "—"}
                 </span>
               </div>
               <div>
@@ -408,14 +408,22 @@ export default function ItemDetails() {
               </div>
             </div>
 
-            {/* Grid Row 2 (2 Cols) */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Grid Row 2 (3 Cols) */}
+            <div className="grid grid-cols-3 gap-2">
               <div>
                 <span className="text-[11px] font-medium gi-text-muted block mb-0.5">
                   Tax Rate
                 </span>
                 <span className="font-semibold gi-text-primary text-xs block">
                   {item.taxRate ? `${item.taxRate}%` : item.gst || "5%"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] font-medium gi-text-muted block mb-0.5">
+                  {item.itemType === "Service" ? "SAC Code" : "HSN Code"}
+                </span>
+                <span className="font-semibold gi-text-primary text-xs block font-mono">
+                  {item.hsnCode || "—"}
                 </span>
               </div>
               <div>
@@ -654,11 +662,8 @@ export default function ItemDetails() {
               <InfoBox title="Purchase Price" value={item.itemType === "Service" ? "N/A" : `₹${Number(item.purchasePrice || 0).toLocaleString("en-IN")}`} />
               <InfoBox title="Stock Value" value={item.itemType === "Service" ? "N/A" : `₹${stockValue.toLocaleString("en-IN")}`} />
               <InfoBox title="GST Rate" value={item.gst || "None"} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <InfoBox title="HSN / SAC Code" value={item.hsnCode || "N/A"} />
-              <InfoBox title="Item Code (SKU)" value={item.itemCode || "N/A"} />
+              <InfoBox title={item.itemType === "Service" ? "SAC Code" : "HSN Code"} value={item.hsnCode || "-"} />
+              <InfoBox title="Item Code (SKU)" value={item.itemCode || item.qrCode || "N/A"} />
             </div>
 
             {item.description && (

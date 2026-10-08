@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -61,7 +61,7 @@ export default function PaymentsView() {
   const [ledgerToDelete, setLedgerToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchPaymentsData = () => {
+  const fetchPaymentsData = useCallback(() => {
     if (activeBusiness?.id) {
       startLoading();
       Promise.all([
@@ -88,11 +88,11 @@ export default function PaymentsView() {
       setInvoices([]);
       stopLoading();
     }
-  };
+  }, [activeBusiness?.id, startLoading, stopLoading]);
 
   useEffect(() => {
     fetchPaymentsData();
-  }, [activeBusiness?.id]);
+  }, [fetchPaymentsData]);
 
   const handleDeleteLedger = async () => {
     if (!ledgerToDelete?.id) return;
@@ -120,9 +120,11 @@ export default function PaymentsView() {
     });
   };
 
-  const { toCollect, toPay } = useMemo(() => {
+  const { toCollect, toPay, toProvideInvoices, toReceiveInvoices } = useMemo(() => {
     let partyCollect = 0;
     let partyPay = 0;
+    let customerProvideInvoices = 0;
+    let supplierReceiveInvoices = 0;
 
     const validParties = parties.filter((p: any) => {
       const t = String(p.type || p.partyType || p.party_type || p.ledger_type || "").toLowerCase();
@@ -131,19 +133,51 @@ export default function PaymentsView() {
       return isSupplier || isCustomer;
     });
 
-    validParties.forEach((p: any) => {
-      const pType = String(p.type || p.partyType || p.party_type || "").toLowerCase();
-      const isSupplier = pType === "supplier" || p.is_supplier === true || p.is_supplier === 1;
-      const bal = Number(p.current_balance ?? p.closing_balance ?? p.closingBalance ?? p.balance ?? 0);
+    if (validParties.length > 0) {
+      validParties.forEach((p: any) => {
+        const pType = String(p.type || p.partyType || p.party_type || "").toLowerCase();
+        const isSupplier = pType === "supplier" || p.is_supplier === true || p.is_supplier === 1;
+        const bal = Number(p.current_balance ?? p.closing_balance ?? p.closingBalance ?? p.balance ?? p.opening_balance ?? 0);
 
-      if (isSupplier) {
-        // Supplier balances are ALWAYS To Pay
-        partyPay += Math.abs(bal);
-      } else {
-        // Customer balances are ALWAYS To Collect
-        partyCollect += Math.abs(bal);
-      }
-    });
+        if (isSupplier) {
+          if (bal > 0) {
+            supplierReceiveInvoices += bal;
+          } else {
+            partyPay += Math.abs(bal);
+          }
+        } else {
+          if (bal < 0) {
+            customerProvideInvoices += Math.abs(bal);
+          } else {
+            partyCollect += bal;
+          }
+        }
+      });
+    } else {
+      const list = Array.isArray(ledgers) ? ledgers : [];
+      list.forEach((l: any) => {
+        const t = String(l.type || l.partyType || l.party_type || l.group || "").toLowerCase();
+        const isSupplier = t === "supplier" || l.is_supplier === true || l.is_supplier === 1;
+        const isCustomer = t === "customer" || l.is_customer === true || l.is_customer === 1;
+        if (!isSupplier && !isCustomer) return;
+
+        const bal = Number(l.current_balance ?? l.closingBalance ?? l.opening_balance ?? l.openingBalance ?? 0);
+
+        if (isSupplier) {
+          if (bal > 0) {
+            supplierReceiveInvoices += bal;
+          } else {
+            partyPay += Math.abs(bal);
+          }
+        } else {
+          if (bal < 0) {
+            customerProvideInvoices += Math.abs(bal);
+          } else {
+            partyCollect += bal;
+          }
+        }
+      });
+    }
 
     let invSalesDue = 0;
     let invPurchDue = 0;
@@ -159,10 +193,12 @@ export default function PaymentsView() {
     });
 
     return {
-      toCollect: validParties.length > 0 ? partyCollect : invSalesDue,
-      toPay: validParties.length > 0 ? partyPay : invPurchDue,
+      toCollect: (validParties.length > 0 || ledgers.length > 0) ? partyCollect : invSalesDue,
+      toPay: (validParties.length > 0 || ledgers.length > 0) ? partyPay : invPurchDue,
+      toProvideInvoices: customerProvideInvoices,
+      toReceiveInvoices: supplierReceiveInvoices,
     };
-  }, [parties, invoices]);
+  }, [parties, ledgers, invoices]);
 
   const filteredLedgers = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -179,14 +215,17 @@ export default function PaymentsView() {
 
       if (!isParty) return false;
 
-      // Suppliers belong exclusively to to_pay, Customers belong exclusively to to_collect
-      const isToPay = isSupplier;
-      const isToCollect = isCustomer;
+      const isToPay = isSupplier && bal <= 0;
+      const isToCollect = isCustomer && bal >= 0;
+      const isToProvideInvoices = isCustomer && bal < 0;
+      const isToReceiveInvoices = isSupplier && bal > 0;
 
       const matchesFilter =
         activeFilter === "all" ||
-        (activeFilter === "to_pay" && isToPay) ||
-        (activeFilter === "to_collect" && isToCollect);
+        (activeFilter === "to_pay" && (isSupplier || isToPay)) ||
+        (activeFilter === "to_collect" && (isCustomer || isToCollect)) ||
+        (activeFilter === "to_provide_invoices" && isToProvideInvoices) ||
+        (activeFilter === "to_receive_invoices" && isToReceiveInvoices);
 
       const matchesSearch = query === "" || nameStr.includes(query);
       return matchesFilter && matchesSearch;
@@ -223,6 +262,28 @@ export default function PaymentsView() {
       return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
   }, [filteredLedgers, sortConfig]);
+
+  const getBalanceDetails = (bal: number) => {
+    const isRed = bal < 0;
+    const isGreen = bal > 0;
+
+    const colorClass = bal === 0
+      ? "gi-text-primary"
+      : isGreen
+        ? "text-emerald-600 dark:text-emerald-400 font-bold"
+        : "text-rose-600 dark:text-rose-400 font-bold";
+
+    const sign = bal > 0 ? "+" : bal < 0 ? "-" : "";
+    const formatted = `${sign}₹${Math.abs(bal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    return {
+      sign,
+      formatted,
+      colorClass,
+      isRed,
+      isGreen,
+    };
+  };
 
   const getTypeBadge = (type: string) => {
     const t = (type || "").toLowerCase();
@@ -271,11 +332,12 @@ export default function PaymentsView() {
           </div>
         </div>
 
-        {/* Summary KPI Row: Total Receivable & Total Due (ON TOP, NO ICONS) */}
+        {/* Summary KPI Row: 4 Calculation Cards */}
         {isLoading ? (
-          <SkeletonStats count={2} />
+          <SkeletonStats count={4} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* 1. Total Receivable (To Collect) */}
             <div
               onClick={() => setActiveFilter(activeFilter === "to_collect" ? "all" : "to_collect")}
               className={`p-4 rounded-xl gi-card shadow-xs cursor-pointer transition hover:scale-[1.005] ${activeFilter === "to_collect" ? "border-2 border-emerald-500" : ""
@@ -289,6 +351,7 @@ export default function PaymentsView() {
               </p>
             </div>
 
+            {/* 2. Total Due (To Pay) */}
             <div
               onClick={() => setActiveFilter(activeFilter === "to_pay" ? "all" : "to_pay")}
               className={`p-4 rounded-xl gi-card shadow-xs cursor-pointer transition hover:scale-[1.005] ${activeFilter === "to_pay" ? "border-2 border-rose-500" : ""
@@ -301,16 +364,46 @@ export default function PaymentsView() {
                 ₹{Number(toPay).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
+
+            {/* 3. Invoices to Provide (Customer -ve Balance) */}
+            <div
+              onClick={() => setActiveFilter(activeFilter === "to_provide_invoices" ? "all" : "to_provide_invoices")}
+              className={`p-4 rounded-xl gi-card shadow-xs cursor-pointer transition hover:scale-[1.005] ${activeFilter === "to_provide_invoices" ? "border-2 border-indigo-500" : ""
+                }`}
+            >
+              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
+                Invoices to Provide
+              </p>
+              <p className="text-xl sm:text-2xl font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-1">
+                ₹{Number(toProvideInvoices).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            {/* 4. Invoices to Receive (Supplier +ve Balance) */}
+            <div
+              onClick={() => setActiveFilter(activeFilter === "to_receive_invoices" ? "all" : "to_receive_invoices")}
+              className={`p-4 rounded-xl gi-card shadow-xs cursor-pointer transition hover:scale-[1.005] ${activeFilter === "to_receive_invoices" ? "border-2 border-amber-500" : ""
+                }`}
+            >
+              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
+                Invoices to Receive
+              </p>
+              <p className="text-xl sm:text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+                ₹{Number(toReceiveInvoices).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </p>
+            </div>
           </div>
         )}
 
         {/* Filter Controls (BELOW CALCULATION CARDS - Right Aligned on Desktop) */}
-        <div className="flex items-center justify-start sm:justify-end">
+        <div className="flex items-center justify-start sm:justify-end overflow-x-auto">
           <FilterTabs
             options={[
               { id: "all", label: "ALL" },
               { id: "to_pay", label: "To Pay" },
               { id: "to_collect", label: "To Collect" },
+              { id: "to_provide_invoices", label: "To Provide Invoices" },
+              { id: "to_receive_invoices", label: "To Receive Invoices" },
             ]}
             activeId={activeFilter}
             onChange={setActiveFilter}
@@ -329,18 +422,7 @@ export default function PaymentsView() {
           ) : (
             sortedLedgers.map((l: any) => {
               const currentBal = Number(l.current_balance ?? l.closingBalance ?? l.opening_balance ?? l.openingBalance ?? 0);
-              const tStr = String(l.type || l.group || l.category || "").toLowerCase().trim();
-              const nStr = String(l.name || "").toLowerCase().trim();
-              const isComp = tStr === "company" || tStr === "capital" || tStr === "equity" || nStr.includes("company");
-
-              const balColor = isComp
-                ? currentBal < 0
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : currentBal > 0
-                    ? "text-rose-600 dark:text-rose-400"
-                    : "gi-text-primary"
-                : "gi-text-primary";
-              const signPrefix = isComp ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : "";
+              const curBalInfo = getBalanceDetails(currentBal);
 
               return (
                 <div
@@ -364,8 +446,8 @@ export default function PaymentsView() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className={`font-mono font-bold text-xs ${balColor}`}>
-                      {signPrefix}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <p className={`font-mono font-bold text-xs ${curBalInfo.colorClass}`}>
+                      {curBalInfo.formatted}
                     </p>
                   </div>
                 </div>
@@ -430,27 +512,8 @@ export default function PaymentsView() {
                   sortedLedgers.map((l: any) => {
                     const currentBal = Number(l.current_balance ?? l.closingBalance ?? l.opening_balance ?? l.openingBalance ?? 0);
                     const openBal = Number(l.opening_balance ?? l.openingBalance ?? 0);
-                    const tStr = String(l.type || l.group || l.category || "").toLowerCase().trim();
-                    const nStr = String(l.name || "").toLowerCase().trim();
-                    const isComp = tStr === "company" || tStr === "capital" || tStr === "equity" || nStr.includes("company");
-
-                    const balColor = isComp
-                      ? currentBal < 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : currentBal > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "gi-text-primary"
-                      : "gi-text-primary";
-                    const signPrefix = isComp ? (currentBal > 0 ? "+" : currentBal < 0 ? "-" : "") : "";
-
-                    const openBalColor = isComp
-                      ? openBal < 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : openBal > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "gi-text-secondary"
-                      : "gi-text-secondary";
-                    const openSignPrefix = isComp ? (openBal > 0 ? "+" : openBal < 0 ? "-" : "") : "";
+                    const curBalInfo = getBalanceDetails(currentBal);
+                    const openBalInfo = getBalanceDetails(openBal);
 
                     return (
                       <tr
@@ -468,7 +531,7 @@ export default function PaymentsView() {
                               <div className="gi-mob-secondary">
                                 <span>{l.type || "Cash"}</span>
                                 <span className="gi-text-muted">·</span>
-                                <span className={balColor}>{signPrefix}₹{Math.abs(currentBal).toLocaleString("en-IN")}</span>
+                                <span className={curBalInfo.colorClass}>{curBalInfo.formatted}</span>
                               </div>
                             </div>
                           </div>
@@ -476,11 +539,11 @@ export default function PaymentsView() {
                         <td className="py-3 px-4">
                           {getTypeBadge(l.type)}
                         </td>
-                        <td className={`py-3 px-4 text-right font-mono ${openBalColor}`}>
-                          {openSignPrefix}₹{Math.abs(openBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        <td className={`py-3 px-4 text-right font-mono ${openBalInfo.colorClass}`}>
+                          {openBalInfo.formatted}
                         </td>
-                        <td className={`py-3 px-4 text-right font-mono font-bold ${balColor}`}>
-                          {signPrefix}₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        <td className={`py-3 px-4 text-right font-mono font-bold ${curBalInfo.colorClass}`}>
+                          {curBalInfo.formatted}
                         </td>
                       </tr>
                     );
@@ -522,7 +585,7 @@ export default function PaymentsView() {
                   type="button"
                   onClick={handleDeleteLedger}
                   disabled={isDeleting}
-                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
+                  className="gi-btn-delete disabled:opacity-50"
                 >
                   {isDeleting ? "Deleting..." : "Delete Ledger"}
                 </button>

@@ -254,8 +254,6 @@ export default function Parties() {
               const isSupplier = String(pType).toLowerCase() === "supplier" || party.is_supplier === true || party.is_supplier === 1;
               const pPhone = party.contact_number || party.phone || party.mobile || "";
               const balance = Number(party.current_balance ?? party.closing_balance ?? party.closingBalance ?? party.net_balance ?? party.balance ?? party.opening_balance ?? 0);
-              const isReceive = !isSupplier && balance !== 0;
-              const isPay = isSupplier && balance !== 0;
               const labelText = balance === 0 ? "Settled" : isSupplier ? "To Pay" : "To Receive";
 
               return (
@@ -281,15 +279,15 @@ export default function Parties() {
                       {pType}
                     </span>
                     <p
-                      className={`font-mono font-bold text-xs mt-1 ${isReceive
+                      className={`font-mono font-bold text-xs mt-1 ${balance > 0
                         ? "text-emerald-600 dark:text-emerald-400"
-                        : isPay
+                        : balance < 0
                           ? "text-rose-600 dark:text-rose-400"
                           : "text-slate-800 dark:text-slate-100"
                         }`}
                     >
                       {balance !== 0
-                        ? `₹${Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                        ? `${balance > 0 ? "+" : "-"}₹${Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
                         : "₹0.00"}
                     </p>
                     <span className="text-[10px] block font-semibold text-slate-400">
@@ -369,8 +367,6 @@ export default function Parties() {
                     const pPhone = party.contact_number || party.phone || party.mobile || "";
                     const pGst = party.gst_number || party.gstNumber || party.gstin || "";
                     const balance = Number(party.current_balance ?? party.closing_balance ?? party.closingBalance ?? party.net_balance ?? party.balance ?? party.opening_balance ?? 0);
-                    const isReceive = !isSupplier && balance !== 0;
-                    const isPay = isSupplier && balance !== 0;
                     const balanceLabel = balance === 0 ? "Settled" : isSupplier ? "To Pay" : "To Receive";
 
                     return (
@@ -413,14 +409,14 @@ export default function Parties() {
                         <td className="py-3 px-4 text-right font-mono font-bold">
                           <span
                             style={{
-                              color: isReceive
+                              color: balance > 0
                                 ? "var(--gi-success)"
-                                : isPay
+                                : balance < 0
                                   ? "var(--gi-danger)"
                                   : "var(--gi-text-secondary)",
                             }}
                           >
-                            ₹{Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            {balance !== 0 ? `${balance > 0 ? "+" : "-"}₹${Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "₹0.00"}
                           </span>
                           <span className="text-[10px] block font-semibold text-slate-400">
                             {balanceLabel}

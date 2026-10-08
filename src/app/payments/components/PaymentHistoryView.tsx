@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  IoAdd,
   IoSearch,
   IoSwapHorizontalOutline,
   IoLocationOutline,
@@ -17,8 +16,9 @@ import {
   IoSwapVerticalOutline,
   IoPencilOutline,
   IoTrashOutline,
-  IoArrowBack,
   IoChevronBack,
+  IoArrowForward,
+  IoReceiptOutline,
 } from "react-icons/io5";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
@@ -31,7 +31,6 @@ import { invoiceApi } from "@/lib/api/invoice";
 import AddLedgerTransactionForm from "@/app/ledgers/components/AddLedgerTransactionForm";
 import { toast } from "react-toastify";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
-import SmoothTransition from "@/components/SmoothTransition";
 
 export default function PaymentHistoryView() {
   const { activeBusiness, hasPermission } = useAuth();
@@ -46,14 +45,42 @@ export default function PaymentHistoryView() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProofImg, setSelectedProofImg] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({
+    key: "date",
+    direction: "desc",
+  });
 
   // Modals for Edit and Delete
   const [txToEdit, setTxToEdit] = useState<any | null>(null);
   const [txToDelete, setTxToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchData = async () => {
+  // Fast O(1) Lookup Maps
+  const ledgerMap = useMemo(() => {
+    const map = new Map<string, any>();
+    ledgers.forEach((l) => {
+      if (l?.id) map.set(String(l.id).toLowerCase().trim(), l);
+    });
+    return map;
+  }, [ledgers]);
+
+  const siteMap = useMemo(() => {
+    const map = new Map<string, any>();
+    siteProjects.forEach((s) => {
+      if (s?.id) map.set(String(s.id).toLowerCase().trim(), s);
+    });
+    return map;
+  }, [siteProjects]);
+
+  const invoiceMap = useMemo(() => {
+    const map = new Map<string, any>();
+    invoices.forEach((inv) => {
+      if (inv?.id) map.set(String(inv.id).toLowerCase().trim(), inv);
+    });
+    return map;
+  }, [invoices]);
+
+  const fetchData = useCallback(async () => {
     if (!activeBusiness?.id) {
       setLedgerTransactions([]);
       setLedgers([]);
@@ -92,13 +119,11 @@ export default function PaymentHistoryView() {
         silentError: true,
       }).catch(() => null);
 
-      console.log("[App PaymentHistory] Actual API Response from POST /transactions:", txRes);
-
       let txList = Array.isArray(txRes?.body)
         ? txRes.body
         : (txRes?.body?.transactions || txRes?.body?.data || []);
 
-      // If transactions API returned nothing but ledgers exist, fallback to ledger transactions
+      // Fallback if transactions API returns empty but ledgers exist
       if ((!Array.isArray(txList) || txList.length === 0) && Array.isArray(lList) && lList.length > 0) {
         const txResults = await Promise.all(
           lList.map((l: any) =>
@@ -130,11 +155,11 @@ export default function PaymentHistoryView() {
     } finally {
       stopLoading();
     }
-  };
+  }, [activeBusiness?.id, startLoading, stopLoading]);
 
   useEffect(() => {
     fetchData();
-  }, [activeBusiness?.id]);
+  }, [fetchData]);
 
   const handleDeleteTransaction = async () => {
     if (!txToDelete?.id) return;
@@ -162,19 +187,22 @@ export default function PaymentHistoryView() {
     });
   };
 
-  const getLedgerName = (id: any) => {
+  const getLedgerNameFast = useCallback((id: any) => {
     if (!id) return "—";
-    const l = ledgers.find((item) => String(item.id) === String(id));
-    return l ? l.name : String(id);
-  };
+    const key = String(id).toLowerCase().trim();
+    const l = ledgerMap.get(key);
+    if (l) return l.name || l.partyName || l.party_name || l.title || "Ledger";
+    return "Ledger";
+  }, [ledgerMap]);
 
-  const getSiteName = (id: any) => {
+  const getSiteNameFast = useCallback((id: any) => {
     if (!id) return "—";
-    const s = siteProjects.find((item) => String(item.id) === String(id));
-    return s ? (s.siteName || s.name || "Site") : String(id);
-  };
+    const key = String(id).toLowerCase().trim();
+    const s = siteMap.get(key);
+    return s ? (s.siteName || s.name || "Site") : "Site";
+  }, [siteMap]);
 
-  const getLinkedInvoice = (tx: any) => {
+  const getLinkedInvoiceFast = useCallback((tx: any) => {
     if (!tx) return null;
     if (tx.sales_invoice && tx.sales_invoice.id) {
       return {
@@ -199,7 +227,7 @@ export default function PaymentHistoryView() {
     const targetInvNum = tx.sales_invoice_number || tx.purchase_invoice_number || tx.invoice_number;
 
     if (targetInvId) {
-      const match = invoices.find((i: any) => String(i.id) === targetInvId);
+      const match = invoiceMap.get(targetInvId.toLowerCase().trim());
       return {
         id: match?.id || targetInvId,
         number: match?.invoice_number || match?.number || targetInvNum || `#${targetInvId}`,
@@ -211,116 +239,188 @@ export default function PaymentHistoryView() {
     }
 
     return null;
-  };
+  }, [invoiceMap]);
 
-  const nonJournalTransactions = useMemo(() => {
-    return ledgerTransactions.filter((tx) => {
-      const typeStr = String(tx.type || tx.transactionType || "").toLowerCase().trim();
-      return typeStr !== "journal" && !typeStr.includes("journal");
-    });
-  }, [ledgerTransactions]);
+  // Pre-normalize transactions for high performance
+  const normalizedTransactions = useMemo(() => {
+    return ledgerTransactions
+      .filter((tx) => {
+        const typeStr = String(tx.type || tx.transactionType || "").toLowerCase().trim();
+        return typeStr !== "journal" && !typeStr.includes("journal");
+      })
+      .map((tx) => {
+        const typeStr = String(tx.type || tx.transactionType || "").toLowerCase().trim();
+        const isIn = typeStr === "payment_in" || typeStr === "credit" || typeStr === "receipt";
+        const isOut = typeStr === "payment_out" || typeStr === "debit" || typeStr === "paid";
 
+        let fromId: any = null;
+        let toId: any = null;
+        let fromName = "—";
+        let toName = "—";
+
+        if (isIn) {
+          // Payment In: From Party (Customer) -> To Payment Ledger (Cash/Bank)
+          fromId = tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId;
+          toId = tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId;
+
+          fromName =
+            tx.party_ledger?.name ||
+            tx.party_ledger?.partyName ||
+            tx.party_ledger?.party_name ||
+            tx.from_ledger?.name ||
+            tx.fromLedger?.name ||
+            getLedgerNameFast(fromId);
+
+          toName =
+            tx.payment_ledger?.name ||
+            tx.payment_ledger?.title ||
+            tx.to_ledger?.name ||
+            tx.toLedger?.name ||
+            getLedgerNameFast(toId);
+        } else if (isOut) {
+          // Payment Out: From Payment Ledger (Cash/Bank) -> To Party (Supplier)
+          fromId = tx.payment_ledger_id || tx.paymentLedgerId || tx.from_ledger_id || tx.fromLedgerId;
+          toId = tx.party_ledger_id || tx.partyLedgerId || tx.to_ledger_id || tx.toLedgerId;
+
+          fromName =
+            tx.payment_ledger?.name ||
+            tx.payment_ledger?.title ||
+            tx.from_ledger?.name ||
+            tx.fromLedger?.name ||
+            getLedgerNameFast(fromId);
+
+          toName =
+            tx.party_ledger?.name ||
+            tx.party_ledger?.partyName ||
+            tx.party_ledger?.party_name ||
+            tx.to_ledger?.name ||
+            tx.toLedger?.name ||
+            getLedgerNameFast(toId);
+        } else {
+          // Contra / Transfer / Journal
+          fromId = tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId;
+          toId = tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId;
+
+          fromName =
+            tx.from_ledger?.name ||
+            tx.from_ledger?.partyName ||
+            tx.fromLedger?.name ||
+            tx.payment_ledger?.name ||
+            getLedgerNameFast(fromId);
+
+          toName =
+            tx.to_ledger?.name ||
+            tx.to_ledger?.partyName ||
+            tx.toLedger?.name ||
+            tx.party_ledger?.name ||
+            getLedgerNameFast(toId);
+        }
+
+        const rawDate = tx.transaction_date || tx.date || tx.created_at;
+        const dObj = rawDate ? new Date(rawDate) : null;
+        const dateFormatted = dObj && !isNaN(dObj.getTime())
+          ? `${String(dObj.getDate()).padStart(2, "0")}/${String(dObj.getMonth() + 1).padStart(2, "0")}/${dObj.getFullYear()}`
+          : rawDate || "—";
+        const dateTimestamp = dObj && !isNaN(dObj.getTime()) ? dObj.getTime() : 0;
+
+        const projId = tx.project_id || tx.siteProjectId;
+        const siteName = projId ? getSiteNameFast(projId) : "";
+        const linkedInv = getLinkedInvoiceFast(tx);
+        const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
+        const amount = Number(tx.amount || 0);
+
+        return {
+          ...tx,
+          typeStr,
+          isIn,
+          isOut,
+          fromName,
+          toName,
+          dateFormatted,
+          dateTimestamp,
+          projId,
+          siteName,
+          linkedInv,
+          isUnlinked,
+          amount,
+        };
+      });
+  }, [ledgerTransactions, getLedgerNameFast, getSiteNameFast, getLinkedInvoiceFast]);
+
+  // KPI calculations
   const { totalTxCount, totalVolume, siteLinkedCount, creditTotal } = useMemo(() => {
     let vol = 0;
     let siteCnt = 0;
     let crTot = 0;
 
-    nonJournalTransactions.forEach((tx) => {
-      const amt = Number(tx.amount) || 0;
-      vol += amt;
-
-      const projId = tx.project_id || tx.siteProjectId;
-      if (projId) {
-        siteCnt += 1;
-      }
-
-      const type = (tx.type || tx.transactionType || "").toLowerCase();
-      if (type === "payment_in" || type === "credit") {
-        crTot += amt;
-      }
+    normalizedTransactions.forEach((tx) => {
+      vol += Math.abs(tx.amount);
+      if (tx.projId) siteCnt += 1;
+      if (tx.isIn) crTot += Math.abs(tx.amount);
     });
 
     return {
-      totalTxCount: nonJournalTransactions.length,
+      totalTxCount: normalizedTransactions.length,
       totalVolume: vol,
       siteLinkedCount: siteCnt,
       creditTotal: crTot,
     };
-  }, [nonJournalTransactions]);
+  }, [normalizedTransactions]);
 
+  // Filtered list
   const filteredTransactions = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
-    return nonJournalTransactions.filter((tx) => {
-      const typeStr = (tx.type || tx.transactionType || "").toLowerCase();
-      const isPayIn = typeStr === "payment_in" || typeStr === "credit";
-      const fromId = isPayIn
-        ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
-        : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
-      const toId = isPayIn
-        ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
-        : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
-
-      const fromName = (
-        isPayIn
-          ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
-          : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId))
-      ).toLowerCase();
-      const toName = (
-        isPayIn
-          ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
-          : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId))
-      ).toLowerCase();
-      const remarkStr = (tx.remark || "").toLowerCase();
-      const projId = tx.project_id || tx.siteProjectId;
-
+    return normalizedTransactions.filter((tx) => {
       const matchesFilter =
         activeFilter === "all" ||
-        (activeFilter === "payment_in" && (typeStr === "payment_in" || typeStr === "credit")) ||
-        (activeFilter === "payment_out" && (typeStr === "payment_out" || typeStr === "debit"));
+        (activeFilter === "payment_in" && tx.isIn) ||
+        (activeFilter === "payment_out" && !tx.isIn);
 
       const matchesSearch =
         query === "" ||
-        fromName.includes(query) ||
-        toName.includes(query) ||
-        remarkStr.includes(query);
+        tx.fromName.toLowerCase().includes(query) ||
+        tx.toName.toLowerCase().includes(query) ||
+        (tx.remark || "").toLowerCase().includes(query) ||
+        (tx.transaction_number || tx.number || "").toLowerCase().includes(query);
 
       return matchesFilter && matchesSearch;
     });
-  }, [nonJournalTransactions, activeFilter, searchQuery, ledgers]);
+  }, [normalizedTransactions, activeFilter, searchQuery]);
 
+  // Sorted list
   const sortedTransactions = useMemo(() => {
     if (!sortConfig.key) return filteredTransactions;
     return [...filteredTransactions].sort((a, b) => {
       let aVal: any, bVal: any;
       switch (sortConfig.key) {
         case "date":
-          aVal = new Date(a.transaction_date || a.date || 0).getTime();
-          bVal = new Date(b.transaction_date || b.date || 0).getTime();
+          aVal = a.dateTimestamp;
+          bVal = b.dateTimestamp;
           break;
         case "transaction_number":
           aVal = String(a.transaction_number || a.number || "").toLowerCase();
           bVal = String(b.transaction_number || b.number || "").toLowerCase();
           break;
         case "fromLedger":
-          aVal = getLedgerName(a.payment_ledger_id || a.fromLedgerId).toLowerCase();
-          bVal = getLedgerName(b.payment_ledger_id || b.fromLedgerId).toLowerCase();
+          aVal = a.fromName.toLowerCase();
+          bVal = b.fromName.toLowerCase();
           break;
         case "toLedger":
-          aVal = getLedgerName(a.party_ledger_id || a.toLedgerId).toLowerCase();
-          bVal = getLedgerName(b.party_ledger_id || b.toLedgerId).toLowerCase();
+          aVal = a.toName.toLowerCase();
+          bVal = b.toName.toLowerCase();
           break;
         case "type":
-          aVal = (a.type || a.transactionType || "").toLowerCase();
-          bVal = (b.type || b.transactionType || "").toLowerCase();
+          aVal = a.typeStr;
+          bVal = b.typeStr;
           break;
         case "amount":
-          aVal = Number(a.amount || 0);
-          bVal = Number(b.amount || 0);
+          aVal = a.amount;
+          bVal = b.amount;
           break;
         case "site":
-          aVal = getSiteName(a.project_id || a.siteProjectId).toLowerCase();
-          bVal = getSiteName(b.project_id || b.siteProjectId).toLowerCase();
+          aVal = a.siteName.toLowerCase();
+          bVal = b.siteName.toLowerCase();
           break;
         default:
           return 0;
@@ -332,24 +432,25 @@ export default function PaymentHistoryView() {
     });
   }, [filteredTransactions, sortConfig]);
 
-  const getTypeBadge = (typeStr: string) => {
-    const t = (typeStr || "").toLowerCase();
-    if (t === "payment_in" || t === "credit") {
-      return <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider gi-badge-success">Payment In</span>;
+  const getTypeBadge = (isIn: boolean) => {
+    if (isIn) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+          Payment In
+        </span>
+      );
     }
-    if (t === "payment_out" || t === "debit") {
-      return <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider gi-badge-danger">Payment Out</span>;
-    }
-    if (t === "contra") {
-      return <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider gi-badge-info">Contra</span>;
-    }
-    return <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider gi-badge-warning">{t || "Journal"}</span>;
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
+        Payment Out
+      </span>
+    );
   };
 
   return (
     <PermissionGuard module="Ledger">
       <div className="flex-1 min-h-0 flex flex-col gap-4 select-none gi-page">
-        {/* Page Heading (No Quick Action Buttons, No Settings Icon) */}
+        {/* Page Header */}
         <div className="shrink-0 flex items-center justify-between border-b gi-divider pb-3">
           <div className="flex items-center gap-3">
             <button
@@ -361,124 +462,120 @@ export default function PaymentHistoryView() {
               <IoChevronBack />
               <span className="gi-back-label">Back</span>
             </button>
-            <h1 className="text-2xl font-bold gi-text-primary tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold gi-text-primary tracking-tight">
               Payment History
             </h1>
           </div>
         </div>
 
-        {/* Summary KPI Row (Desktop Only) */}
-        <div className="hidden md:grid shrink-0 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
+        {/* Summary KPI Cards Row */}
+        <div className="grid shrink-0 grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-2xl border gi-border gi-card shadow-2xs flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Transferred Volume
+              <p className="text-[11px] font-medium gi-text-muted uppercase tracking-wider">
+                Total Volume
               </p>
-              <p className="text-lg sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
+              <p className="text-base sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
                 ₹{totalVolume.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <span className="p-2 rounded-lg gi-badge-info text-lg">
+            <span className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xl shrink-0">
               <IoSwapHorizontalOutline />
             </span>
           </div>
 
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl border gi-border gi-card shadow-2xs flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Total Transactions
+              <p className="text-[11px] font-medium gi-text-muted uppercase tracking-wider">
+                Transactions
               </p>
-              <p className="text-lg sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
+              <p className="text-base sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
                 {totalTxCount}
               </p>
-              <p className="text-[10px] gi-text-muted mt-0.5">Recorded in system</p>
             </div>
-            <span className="p-2 rounded-lg gi-badge-info text-lg">
+            <span className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-xl shrink-0">
               <IoLayersOutline />
             </span>
           </div>
 
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl border gi-border gi-card shadow-2xs flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Site / Project Linked
+              <p className="text-[11px] font-medium gi-text-muted uppercase tracking-wider">
+                Site Linked
               </p>
-              <p className="text-lg sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
+              <p className="text-base sm:text-xl font-bold font-mono gi-text-primary mt-0.5">
                 {siteLinkedCount}
               </p>
-              <p className="text-[10px] gi-text-muted mt-0.5">Tagged to active site</p>
             </div>
-            <span className="p-2 rounded-lg gi-badge-success text-lg">
+            <span className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 text-xl shrink-0">
               <IoLocationOutline />
             </span>
           </div>
 
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl border gi-border gi-card shadow-2xs flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Payment In Total
+              <p className="text-[11px] font-medium gi-text-muted uppercase tracking-wider">
+                Collected (In)
               </p>
-              <p className="text-lg sm:text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <p className="text-base sm:text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
                 ₹{creditTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <span className="p-2 rounded-lg gi-badge-success text-lg">
+            <span className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-xl shrink-0">
               <IoWalletOutline />
             </span>
           </div>
         </div>
 
-        {/* Filter Controls & Search */}
-        <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-0 bg-transparent border-none shadow-none">
-          {/* Search Bar (Desktop Only) - Left on Desktop */}
-          <div className="hidden md:block relative w-full sm:w-64 order-1">
+        {/* Search & Filter Bar */}
+        <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72">
             <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 gi-text-muted text-sm" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ledger or remark..."
-              className="w-full h-8 pl-8 pr-3 rounded-lg gi-input text-xs outline-none transition"
+              placeholder="Search ledger, transaction or remark..."
+              className="w-full h-9 pl-9 pr-3 rounded-xl gi-input text-xs outline-none transition"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <IoClose className="text-sm" />
+              </button>
+            )}
           </div>
 
-          {/* Filter Tabs - Right on Desktop */}
+          {/* Filter Tabs */}
           <FilterTabs
             options={[
               { id: "all", label: "All" },
-              { id: "payment_out", label: "Paid" },
-              { id: "payment_in", label: "Collected" },
+              { id: "payment_out", label: "Paid (Out)" },
+              { id: "payment_in", label: "Collected (In)" },
             ]}
             activeId={activeFilter}
             onChange={setActiveFilter}
             layoutId="paymentHistoryFilterPill"
-            className="order-2 sm:ml-auto"
+            className="sm:ml-auto"
           />
         </div>
 
-        {/* Mobile Cards View (< 768px) — MATCHES IMAGE 2 */}
+        {/* Mobile View (< 768px) */}
         <div className="block md:hidden space-y-2.5 shrink-0">
           {isLoading ? (
             <SkeletonCard count={5} />
           ) : sortedTransactions.length === 0 ? (
-            <div className="py-10 text-center gi-card text-xs gi-text-muted rounded-2xl">
-              No transactions found.
+            <div className="py-12 text-center gi-card text-xs gi-text-muted rounded-2xl border gi-border">
+              No transactions found matching your criteria.
             </div>
           ) : (
             sortedTransactions.map((tx) => {
-              const toId = tx.party_ledger_id || tx.toLedgerId || tx.payment_ledger_id || tx.fromLedgerId;
-              const partyName = getLedgerName(toId);
-              const txDate = tx.transaction_date || tx.date || tx.created_at;
-              const dObj = txDate ? new Date(txDate) : null;
-              const dateStr = dObj && !isNaN(dObj.getTime())
-                ? `${String(dObj.getDate()).padStart(2, "0")}-${String(dObj.getMonth() + 1).padStart(2, "0")}-${dObj.getFullYear()}`
-                : txDate || "—";
-
-              const typeStr = String(tx.type || tx.transactionType || "").toLowerCase();
-              const isIn = typeStr === "payment_in" || typeStr === "credit" || typeStr === "in";
               const targetId = tx.payment_id || tx.paymentId || tx.id;
-              const linkedInv = getLinkedInvoice(tx);
-              const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
+              const mainLedgerName = tx.isIn ? tx.fromName : tx.toName;
 
               return (
                 <div
@@ -486,24 +583,41 @@ export default function PaymentHistoryView() {
                   onClick={() => {
                     if (targetId) router.push(`/paymentDetails/${targetId}?from=/paymentHistory`);
                   }}
-                  className="p-3.5 rounded-2xl border gi-border gi-card flex items-center justify-between gap-3 cursor-pointer hover:bg-[var(--gi-hover)] active:scale-[0.99] transition shadow-2xs"
+                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs flex items-center justify-between gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-zinc-700">
-                      {partyName.charAt(0).toUpperCase() || "P"}
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-base font-bold ${
+                        tx.isIn
+                          ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
+                          : "bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50"
+                      }`}
+                    >
+                      {tx.isIn ? <IoArrowDownOutline /> : <IoArrowUpOutline />}
                     </div>
 
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-sm gi-text-primary truncate">
-                        {partyName}
-                      </h3>
-                      <p className="text-xs gi-text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span>{dateStr}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                          {mainLedgerName}
+                        </h3>
+                        {getTypeBadge(tx.isIn)}
+                      </div>
+                      <p className="text-[11px] gi-text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span>{tx.dateFormatted}</span>
                         {(tx.transaction_number || tx.number) && (
                           <>
                             <span>•</span>
-                            <span className="font-mono text-[11px] font-medium gi-text-secondary">
+                            <span className="font-mono text-[10px] font-semibold text-slate-500">
                               {tx.transaction_number || tx.number}
+                            </span>
+                          </>
+                        )}
+                        {tx.siteName && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 truncate">
+                              {tx.siteName}
                             </span>
                           </>
                         )}
@@ -513,21 +627,42 @@ export default function PaymentHistoryView() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right">
-                      <p className={`font-semibold font-mono text-sm ${isIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        ₹{Number(tx.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <p
+                        className={`font-mono font-bold text-xs ${
+                          tx.isIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                        }`}
+                      >
+                        {tx.isIn ? "+" : "-"}₹{Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
-                    {isUnlinked && hasPermission("Ledger", "Delete") && (
+                    {tx.isUnlinked && hasPermission("Ledger", "Delete") && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setTxToDelete(tx);
                         }}
-                        className="p-1 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                        className="gi-action-btn-delete"
                         title="Delete Unlinked Transaction"
                       >
                         <IoTrashOutline className="text-sm" />
+                      </button>
+                    )}
+                    {hasPermission("Ledger", "Edit") && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (tx.typeStr === "payment_in" || tx.typeStr === "payment_out" || tx.typeStr === "credit" || tx.typeStr === "debit") {
+                            router.push(`/payment/receivedPayment?id=${tx.id}&type=${tx.isIn ? "credit" : "debit"}`);
+                          } else {
+                            router.push(`/addLedgerTransaction?id=${tx.id}`);
+                          }
+                        }}
+                        className="gi-action-btn-edit"
+                        title="Edit Transaction"
+                      >
+                        <IoPencilOutline className="text-sm" />
                       </button>
                     )}
                   </div>
@@ -537,11 +672,11 @@ export default function PaymentHistoryView() {
           )}
         </div>
 
-        {/* Desktop Data Table (>= 768px) */}
-        <div className="hidden md:flex flex-1 min-h-0 flex-col gi-table-container shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs gi-table border-collapse">
-              <thead>
+        {/* Desktop Table View (>= 768px) */}
+        <div className="hidden md:flex flex-1 min-h-0 flex-col bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 dark:bg-zinc-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-zinc-800 sticky top-0 z-10">
                 <tr>
                   {[
                     { key: "date", label: "Date", align: "left" },
@@ -549,17 +684,21 @@ export default function PaymentHistoryView() {
                     { key: "toLedger", label: "To Ledger", align: "left" },
                     { key: "type", label: "Type", align: "left" },
                     { key: "amount", label: "Amount", align: "right" },
-                    { key: "site", label: "Site", align: "left" },
-                    { key: "linkedInvoice", label: "Invoice", align: "left" },
+                    { key: "site", label: "Site / Project", align: "left" },
+                    { key: "linkedInvoice", label: "Linked Invoice", align: "left" },
                   ].map((col, idx) => {
                     const isActive = sortConfig.key === col.key;
                     return (
                       <th
                         key={idx}
                         onClick={() => handleSort(col.key)}
-                        className={`py-2 px-2 cursor-pointer select-none hover:bg-[var(--gi-hover)] transition text-${col.align}`}
+                        className={`py-3 px-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-${col.align}`}
                       >
-                        <div className={`flex items-center gap-1 ${col.align === "right" ? "justify-end" : col.align === "center" ? "justify-center" : "justify-start"}`}>
+                        <div
+                          className={`flex items-center gap-1 ${
+                            col.align === "right" ? "justify-end" : "justify-start"
+                          }`}
+                        >
                           <span>{col.label}</span>
                           {isActive ? (
                             sortConfig.direction === "asc" ? (
@@ -574,159 +713,136 @@ export default function PaymentHistoryView() {
                       </th>
                     );
                   })}
-                  <th className="py-2 px-2">Remark</th>
-                  <th className="py-2 px-2 text-center">Actions</th>
+                  <th className="py-3 px-3">Remark</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y gi-divider">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/60">
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-16" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-24" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-24" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-16" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-16 ml-auto" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-20" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-20" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-20" /></td>
-                      <td className="py-2 px-2"><SkeletonBox className="h-5 w-12 mx-auto" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-20" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-28" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-28" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-5 w-20" /></td>
+                      <td className="py-3 px-3 text-right"><SkeletonBox className="h-4 w-20 ml-auto" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-24" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-20" /></td>
+                      <td className="py-3 px-3"><SkeletonBox className="h-4 w-24" /></td>
+                      <td className="py-3 px-3 text-center"><SkeletonBox className="h-6 w-16 mx-auto" /></td>
                     </tr>
                   ))
                 ) : sortedTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-12 text-center gi-text-muted text-xs">
-                      No ledger transactions found. Click &quot;Add Transaction&quot; to record a new transfer.
+                      No payment transactions found matching your search.
                     </td>
                   </tr>
                 ) : (
                   sortedTransactions.map((tx) => {
-                    const typeStr = (tx.type || tx.transactionType || "").toLowerCase();
-                    const isPayIn = typeStr === "payment_in" || typeStr === "credit";
-                    const fromId = isPayIn
-                      ? (tx.party_ledger_id || tx.partyLedgerId || tx.from_ledger_id || tx.fromLedgerId)
-                      : (tx.from_ledger_id || tx.fromLedgerId || tx.payment_ledger_id || tx.paymentLedgerId);
-                    const toId = isPayIn
-                      ? (tx.payment_ledger_id || tx.paymentLedgerId || tx.to_ledger_id || tx.toLedgerId)
-                      : (tx.to_ledger_id || tx.toLedgerId || tx.party_ledger_id || tx.partyLedgerId);
-                    const dateStr = tx.transaction_date || tx.date || "—";
-                    const projId = tx.project_id || tx.siteProjectId;
                     const proofImg = tx.proof_image || tx.imageProof;
-                    const linkedInv = getLinkedInvoice(tx);
-                    const isUnlinked = !linkedInv && !tx.invoice_id && !tx.invoiceId && !tx.linked_invoice_id;
-                    const fromName = isPayIn
-                      ? (tx.party_ledger?.name || tx.party_ledger?.partyName || tx.from_ledger?.name || tx.fromLedger?.name || getLedgerName(fromId))
-                      : (tx.from_ledger?.name || tx.fromLedger?.name || tx.payment_ledger?.name || getLedgerName(fromId));
-                    const toName = isPayIn
-                      ? (tx.to_ledger?.name || tx.toLedger?.name || tx.payment_ledger?.name || getLedgerName(toId))
-                      : (tx.to_ledger?.name || tx.toLedger?.name || tx.party_ledger?.name || tx.party_ledger?.partyName || getLedgerName(toId));
 
                     return (
                       <tr
                         key={tx.id}
                         onClick={() => {
-                          const targetId = tx.payment_id || tx.paymentId || tx.id || tx.transaction_number;
+                          const targetId = tx.payment_id || tx.paymentId || tx.id;
                           if (targetId) router.push(`/paymentDetails/${targetId}?from=/paymentHistory`);
                         }}
-                        className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
+                        className="hover:bg-slate-50/70 dark:hover:bg-zinc-800/40 transition cursor-pointer"
                       >
-                        <td className="py-2 px-2 font-semibold gi-text-primary whitespace-nowrap">
-                          {dateStr}
+                        <td className="py-3 px-3 font-mono font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          {tx.dateFormatted}
                         </td>
-                        <td className="py-2 px-2 font-semibold text-rose-600 dark:text-rose-400 max-w-[130px] truncate" title={fromName}>
-                          {fromName}
+                        <td className="py-3 px-3 font-semibold gi-text-primary max-w-[140px] truncate" title={tx.fromName}>
+                          {tx.fromName}
                         </td>
-                        <td className="py-2 px-2 font-semibold text-emerald-600 dark:text-emerald-400 max-w-[130px] truncate" title={toName}>
-                          {toName}
+                        <td className="py-3 px-3 font-semibold gi-text-primary max-w-[140px] truncate" title={tx.toName}>
+                          {tx.toName}
                         </td>
-                        <td className="py-2 px-2 shrink-0">
-                          {getTypeBadge(tx.type || tx.transactionType)}
+                        <td className="py-3 px-3 shrink-0">
+                          {getTypeBadge(tx.isIn)}
                         </td>
-                        <td className="py-2 px-2 text-right font-mono font-bold gi-text-primary text-xs whitespace-nowrap">
-                          {Number(tx.amount || 0) < 0 ? "-" : (tx.type === "payment_in" || tx.type === "credit" ? "+" : "")}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-xs whitespace-nowrap">
+                          <span className={tx.isIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                            {tx.isIn ? "+" : "-"}₹{Math.abs(tx.amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         </td>
-                        <td className="py-2 px-2 max-w-[110px] truncate" title={projId ? getSiteName(projId) : ""}>
-                          {projId ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium gi-text-primary truncate">
-                              <IoLocationOutline className="text-xs text-indigo-500 shrink-0" />
-                              <span className="truncate">{getSiteName(projId)}</span>
+                        <td className="py-3 px-3 max-w-[120px] truncate" title={tx.siteName || ""}>
+                          {tx.siteName ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 truncate">
+                              <IoLocationOutline className="text-xs shrink-0" />
+                              <span className="truncate">{tx.siteName}</span>
                             </span>
                           ) : (
                             <span className="gi-text-muted text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2 max-w-[110px] truncate" onClick={(e) => e.stopPropagation()}>
-                          {linkedInv ? (
-                            linkedInv.id ? (
+                        <td className="py-3 px-3 max-w-[120px] truncate" onClick={(e) => e.stopPropagation()}>
+                          {tx.linkedInv ? (
+                            tx.linkedInv.id ? (
                               <Link
-                                href={`/invoiceDetails/${linkedInv.id}`}
+                                href={`/invoiceDetails/${tx.linkedInv.id}`}
                                 className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 truncate"
-                                title={linkedInv.number}
+                                title={tx.linkedInv.number}
                               >
-                                <span className="truncate">{linkedInv.number}</span>
+                                <IoReceiptOutline className="text-xs shrink-0" />
+                                <span className="truncate">{tx.linkedInv.number}</span>
                               </Link>
                             ) : (
-                              <span className="font-mono text-xs font-medium gi-text-primary truncate" title={linkedInv.number}>{linkedInv.number}</span>
+                              <span className="font-mono text-xs font-medium gi-text-primary truncate" title={tx.linkedInv.number}>
+                                {tx.linkedInv.number}
+                              </span>
                             )
                           ) : (
                             <span className="gi-text-muted text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2 text-xs max-w-[140px] truncate gi-text-secondary" title={tx.remark || ""}>
+                        <td className="py-3 px-3 text-xs max-w-[150px] truncate gi-text-secondary" title={tx.remark || ""}>
                           {tx.remark ? (
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <span className="truncate">{tx.remark}</span>
-                              {tx.remark.toLowerCase().includes("bulk payment") && (
-                                <span className="inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 w-fit">
-                                  Bulk Split
-                                </span>
-                              )}
-                            </div>
+                            <span className="truncate block">{tx.remark}</span>
                           ) : (
                             "—"
                           )}
                         </td>
-                        <td className="py-2 px-2 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
-
+                        <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
                             {proofImg && (
                               <button
                                 type="button"
                                 onClick={() => setSelectedProofImg(proofImg)}
-                                className="p-1.5 rounded-md gi-badge-success transition inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
-                                title="View Proof"
+                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer"
+                                title="View Proof Image"
                               >
-                                <IoEyeOutline className="text-xs" />
+                                <IoEyeOutline className="text-sm" />
+                              </button>
+                            )}
+
+                            {tx.isUnlinked && hasPermission("Ledger", "Delete") && (
+                              <button
+                                type="button"
+                                onClick={() => setTxToDelete(tx)}
+                                className="gi-action-btn-delete"
+                                title="Delete Unlinked Transaction"
+                              >
+                                <IoTrashOutline className="text-sm" />
                               </button>
                             )}
 
                             {hasPermission("Ledger", "Edit") && (
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const tType = String(tx.type || tx.transactionType || "").toLowerCase();
-                                  if (tType === "payment_in" || tType === "payment_out" || tType === "credit" || tType === "debit") {
-                                    router.push(`/payment/receivedPayment?id=${tx.id}&type=${tType === "payment_in" || tType === "credit" ? "credit" : "debit"}`);
+                                onClick={() => {
+                                  if (tx.typeStr === "payment_in" || tx.typeStr === "payment_out" || tx.typeStr === "credit" || tx.typeStr === "debit") {
+                                    router.push(`/payment/receivedPayment?id=${tx.id}&type=${tx.isIn ? "credit" : "debit"}`);
                                   } else {
                                     router.push(`/addLedgerTransaction?id=${tx.id}`);
                                   }
                                 }}
-                                className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                                className="gi-action-btn-edit"
                                 title="Edit Transaction"
                               >
                                 <IoPencilOutline className="text-sm" />
-                              </button>
-                            )}
-
-                            {isUnlinked && hasPermission("Ledger", "Delete") && (
-                              <button
-                                type="button"
-                                onClick={() => setTxToDelete(tx)}
-                                className="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                                title="Delete Unlinked Transaction"
-                              >
-                                <IoTrashOutline className="text-sm" />
                               </button>
                             )}
                           </div>
@@ -772,7 +888,7 @@ export default function PaymentHistoryView() {
               </div>
 
               <p className="text-xs gi-text-secondary leading-relaxed">
-                Are you sure you want to delete this transaction of <strong className="gi-text-primary">₹{Number(txToDelete.amount || 0).toLocaleString("en-IN")}</strong>? This will automatically reverse ledger balance updates.
+                Are you sure you want to delete this transaction of <strong className="gi-text-primary">₹{Math.abs(Number(txToDelete.amount || 0)).toLocaleString("en-IN")}</strong>? This will automatically reverse ledger balance updates.
               </p>
 
               <div className="flex items-center justify-end gap-2 pt-2">
@@ -796,7 +912,7 @@ export default function PaymentHistoryView() {
           </div>
         )}
 
-        {/* Proof Image View Modal */}
+        {/* Proof Image Modal */}
         {selectedProofImg && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="relative max-w-lg w-full gi-card p-4 rounded-xl shadow-2xl border gi-divider space-y-3">
@@ -835,4 +951,3 @@ export default function PaymentHistoryView() {
     </PermissionGuard>
   );
 }
-

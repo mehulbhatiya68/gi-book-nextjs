@@ -30,6 +30,7 @@ import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
 import { SkeletonForm } from "@/components/Skeleton";
 import CustomSelect from "@/components/CustomSelect";
 import { toast } from "react-toastify";
+import PaymentSettlementChecklistModal, { SettledInvoiceInfo } from "@/components/PaymentSettlementChecklistModal";
 
 function ReceivedPaymentContent() {
   const router = useRouter();
@@ -80,6 +81,23 @@ function ReceivedPaymentContent() {
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [partySearch, setPartySearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Settlement Checklist Animation Modal State
+  const [checklistData, setChecklistData] = useState<{
+    isOpen: boolean;
+    amount: number;
+    partyName: string;
+    paymentType: "credit" | "debit";
+    settledInvoices: SettledInvoiceInfo[];
+    redirectPath: string;
+  }>({
+    isOpen: false,
+    amount: 0,
+    partyName: "",
+    paymentType: "credit",
+    settledInvoices: [],
+    redirectPath: "/payments",
+  });
 
   // Fetch selected party's unpaid/pending invoices from API
   useEffect(() => {
@@ -463,15 +481,28 @@ function ReceivedPaymentContent() {
         payload.project_id = selectedSiteProjectId;
       }
 
+      const settledInvoicesList: SettledInvoiceInfo[] = activeAllocations.map(({ invoice: inv, allocatedAmount }) => {
+        const invDue = Number(inv.balance_due ?? inv.due_amount ?? (Number(inv.amount || 0) - Number(inv.paid_amount || 0)));
+        const isFullySettled = allocatedAmount >= invDue;
+        return {
+          invoiceNumber: String(inv.invoice_number || inv.number || `#${inv.id}`),
+          amountApplied: allocatedAmount,
+          isFullySettled,
+          partyName: getPartyDisplayName(selectedParty),
+        };
+      });
+
+      let targetRedirect = "/payments";
+
       if (paymentIdParam) {
         await paymentApi.updatePayment(paymentIdParam, payload);
         toast.success("Payment record updated successfully!");
-        router.replace("/payments");
+        targetRedirect = "/payments";
       } else if (invoiceIdParam || linkedInvoice?.id) {
         const targetInvId = invoiceIdParam || linkedInvoice?.id;
         await invoiceApi.receivePayment(targetInvId, payload);
         toast.success("Invoice payment recorded successfully!");
-        router.replace(`/invoiceDetails/${targetInvId}`);
+        targetRedirect = `/invoiceDetails/${targetInvId}`;
       } else if (activeAllocations.length === 1) {
         const { invoice: inv, allocatedAmount } = activeAllocations[0];
         const singlePayload = {
@@ -481,7 +512,7 @@ function ReceivedPaymentContent() {
         };
         await invoiceApi.receivePayment(inv.id, singlePayload);
         toast.success(`Invoice payment recorded successfully for ${inv.invoice_number || inv.number || inv.id}!`);
-        router.replace("/payments");
+        targetRedirect = "/payments";
       } else if (activeAllocations.length > 1) {
         const totalPaymentAmt = Number(amount);
         let successCount = 0;
@@ -502,14 +533,24 @@ function ReceivedPaymentContent() {
         }
 
         toast.success(`Bulk payment of ₹${totalPaymentAmt.toLocaleString("en-IN")} allocated across ${successCount} invoices successfully!`);
-        router.replace("/payments");
+        targetRedirect = "/payments";
       } else {
         await paymentApi.createPayment(payload);
         toast.success(
           paymentType === "credit" ? "Payment Received successfully!" : "Payment Out recorded successfully!"
         );
-        router.replace("/payments");
+        targetRedirect = "/payments";
       }
+
+      setChecklistData({
+        isOpen: true,
+        amount: Number(amount),
+        partyName: getPartyDisplayName(selectedParty),
+        paymentType,
+        settledInvoices: settledInvoicesList,
+        redirectPath: targetRedirect,
+      });
+      setIsSubmitting(false);
     } catch (err: any) {
       console.error("[App Payment Error]:", err);
       toast.error(err?.message || "Failed to save payment record.");
@@ -1203,6 +1244,23 @@ function ReceivedPaymentContent() {
             </div>
           </div>
         )}
+
+        {/* Payment Settlement Checklist Animation Modal */}
+        <PaymentSettlementChecklistModal
+          isOpen={checklistData.isOpen}
+          amount={checklistData.amount}
+          partyName={checklistData.partyName}
+          paymentType={checklistData.paymentType}
+          settledInvoices={checklistData.settledInvoices}
+          onComplete={() => {
+            setChecklistData((prev) => ({ ...prev, isOpen: false }));
+            router.replace(checklistData.redirectPath);
+          }}
+          onClose={() => {
+            setChecklistData((prev) => ({ ...prev, isOpen: false }));
+            router.replace(checklistData.redirectPath);
+          }}
+        />
       </div>
     </PermissionGuard>
   );

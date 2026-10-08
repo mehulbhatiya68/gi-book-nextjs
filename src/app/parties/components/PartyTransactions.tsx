@@ -39,16 +39,18 @@ export default function PartyTransactions({ party, activeTab = "invoices" }: { p
       Promise.all([
         invoiceApi.getInvoices({ ledger_id: pId, per_page: "all", silentError: true }).catch(() => ({ body: [] })),
         paymentApi.getPayments({ party_ledger_id: pId, silentError: true }).catch(() => ({ body: [] })),
-        paymentApi.getPayments({ silentError: true }).catch(() => ({ body: [] })),
       ])
-        .then(([invRes, payRes, allPayRes]: any[]) => {
+        .then(async ([invRes, payRes]: any[]) => {
           const invList = invRes?.body?.invoices || invRes?.body?.data || (Array.isArray(invRes?.body) ? invRes.body : []);
           setInvoices(Array.isArray(invList) ? invList : []);
 
-          const payList1 = payRes?.body?.payments || payRes?.body?.data || (Array.isArray(payRes?.body) ? payRes.body : []);
-          const payList2 = allPayRes?.body?.payments || allPayRes?.body?.data || (Array.isArray(allPayRes?.body) ? allPayRes.body : []);
-          const combinedPay = [...(Array.isArray(payList1) ? payList1 : []), ...(Array.isArray(payList2) ? payList2 : [])];
-          setPayments(combinedPay);
+          let payList = payRes?.body?.payments || payRes?.body?.data || (Array.isArray(payRes?.body) ? payRes.body : []);
+          if (!Array.isArray(payList) || payList.length === 0) {
+            const fallbackRes: any = await paymentApi.getPayments({ silentError: true }).catch(() => ({ body: [] }));
+            const fallbackList = fallbackRes?.body?.payments || fallbackRes?.body?.data || (Array.isArray(fallbackRes?.body) ? fallbackRes.body : []);
+            payList = Array.isArray(fallbackList) ? fallbackList : [];
+          }
+          setPayments(payList);
         })
         .finally(() => setIsLoading(false));
     } else {
