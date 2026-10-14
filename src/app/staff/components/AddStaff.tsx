@@ -120,9 +120,13 @@ export default function AddStaff() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    let finalValue: any = type === "checkbox" ? checked : value;
+    if (name === "mobile") {
+      finalValue = String(value).replace(/\D/g, "").slice(0, 10);
+    }
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: finalValue,
     }));
   };
 
@@ -315,7 +319,10 @@ export default function AddStaff() {
                         name="mobile"
                         value={formData.mobile}
                         onChange={handleChange}
-                        placeholder="9876543210"
+                        maxLength={10}
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        placeholder="10-digit mobile number"
                         className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-xs sm:text-sm focus:outline-none focus:border-indigo-500 transition"
                       />
                     </div>

@@ -317,9 +317,11 @@ export default function SignUpForm() {
                   type="tel"
                   required
                   value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   placeholder="10-digit mobile number"
                   maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
                   className="w-full h-11 px-4 text-sm rounded-xl gi-input outline-none transition"
                 />
               </div>

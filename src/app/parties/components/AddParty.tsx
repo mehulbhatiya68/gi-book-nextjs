@@ -362,8 +362,11 @@ export default function AddParty() {
                             <input
                                 type="tel"
                                 value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                placeholder="e.g. 9876543210"
+                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                                maxLength={10}
+                                inputMode="numeric"
+                                pattern="[0-9]{10}"
+                                placeholder="10-digit mobile number"
                                 className="w-full px-3.5 py-2 rounded-lg text-sm gi-input focus:outline-none"
                             />
                         </div>

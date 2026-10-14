@@ -364,8 +364,11 @@ export default function AddBusiness() {
               <input
                 type="tel"
                 value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="1234567890"
+                onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                maxLength={10}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                placeholder="10-digit mobile number"
                 required
                 className="w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm gi-input focus:outline-none focus:border-indigo-500 font-mono font-medium"
               />
