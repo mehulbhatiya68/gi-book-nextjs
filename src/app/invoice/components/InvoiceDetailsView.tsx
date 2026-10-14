@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter, usePathname, useSearchParams } from "next/navigation";
 import { handleSmartBack } from "@/lib/utils/smartNavigation";
 import {
-  IoArrowBack,
   IoChevronBack,
   IoDocumentTextOutline,
   IoCardOutline,
@@ -19,7 +18,6 @@ import {
   IoClose,
 } from "react-icons/io5";
 import { LiaFileInvoiceSolid } from "react-icons/lia";
-import { FaFileInvoiceDollar } from "react-icons/fa6";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import PermissionGuard from "@/components/PermissionGuard";
@@ -29,7 +27,6 @@ import { invoiceApi } from "@/lib/api/invoice";
 import { paymentApi } from "@/lib/api/payment";
 import { transactionApi } from "@/lib/api/transaction";
 import { ledgerApi } from "@/lib/api/ledger";
-import { apiClient } from "@/lib/api/client";
 import { toast } from "react-toastify";
 import { isPurchaseInvoice, isSalesInvoice, getInvoiceNumber, getInvoicePartyName, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
 import { getPaymentModeDisplay } from "@/lib/utils/transactionDisplayUtils";

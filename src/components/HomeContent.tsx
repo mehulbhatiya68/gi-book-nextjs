@@ -24,7 +24,7 @@ import { dashboardApi } from "@/lib/api/dashboard";
 import { transactionApi } from "@/lib/api/transaction";
 import { getAuthToken } from "@/lib/api/client";
 
-import { SkeletonStats, SkeletonTable, SkeletonGraph } from "@/components/Skeleton";
+import { SkeletonTable, SkeletonGraph } from "@/components/Skeleton";
 
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
@@ -94,7 +94,12 @@ export default function HomeContent({
         setIsDashboardApiLoading(true);
       }
 
-      const p1 = transactionApi.getTransactions({ per_page: "all", silentError: true })
+      const p1 = transactionApi.getTransactions({
+        per_page: "all",
+        sort_by: "transaction_date",
+        sort_dir: "desc",
+        silentError: true,
+      })
         .then((txRes: any) => {
           const txList = txRes?.body?.transactions || txRes?.body?.data || (Array.isArray(txRes?.body) ? txRes.body : txRes?.transactions || txRes?.data || []);
           setPayments(Array.isArray(txList) ? txList : []);
@@ -148,48 +153,65 @@ export default function HomeContent({
     ? Number(balancesApi.to_pay)
     : 0;
 
+  // Helper to detect if a ledger or party name is related to a company ledger
+  const isCompanyLedger = (ledger: any, fallbackName?: string) => {
+    if (!ledger && !fallbackName) return false;
+    const lType = String(
+      ledger?.type ||
+      ledger?.ledger_type ||
+      ledger?.category ||
+      ledger?.group ||
+      ""
+    ).toLowerCase().trim();
+    const lName = String(
+      ledger?.name ||
+      ledger?.partyName ||
+      ledger?.party_name ||
+      fallbackName ||
+      ""
+    ).toLowerCase().trim();
+
+    const companyTypes = ["company", "capital", "equity", "company ledger", "company_ledger"];
+    if (companyTypes.includes(lType)) return true;
+    if (lName.includes("company") || lName.includes("capital") || lName.includes("equity")) return true;
+    return false;
+  };
+
   const recentTransactions = payments
     .filter((pay: any) => {
       const typeStr = String(pay.type || pay.transaction_type || pay.normalizedType || pay.transactionType || "").toLowerCase().trim();
 
-      // Exclude journal, contra, transfer, and company/internal transactions
-      if (
-        typeStr === "journal" ||
-        typeStr === "contra" ||
-        typeStr === "transfer" ||
-        typeStr === "company" ||
-        typeStr === "invoice_settlement" ||
-        typeStr.includes("journal") ||
-        typeStr.includes("contra") ||
-        typeStr.includes("transfer") ||
-        typeStr.includes("company")
-      ) {
+      // Exclude if transaction itself is marked as company
+      if (typeStr === "company" || typeStr.includes("company")) {
         return false;
       }
 
-      // Exclude transactions where party/ledger type is company or internal
-      const partyType = String(
-        pay.party_ledger?.type ||
-        pay.party_ledger?.ledger_type ||
-        pay.ledger?.type ||
-        pay.party?.type ||
-        pay.party_type ||
-        ""
-      ).toLowerCase().trim();
+      // Exclude if any involved ledger is a company / capital / equity ledger
+      if (isCompanyLedger(pay.party_ledger, pay.partyName || pay.party_name)) return false;
+      if (isCompanyLedger(pay.party)) return false;
+      if (isCompanyLedger(pay.ledger)) return false;
+      if (isCompanyLedger(pay.from_ledger || pay.fromLedger)) return false;
+      if (isCompanyLedger(pay.to_ledger || pay.toLedger)) return false;
+      if (isCompanyLedger(pay.payment_ledger || pay.paymentLedger)) return false;
 
-      const fromType = String(pay.from_ledger?.type || pay.fromLedger?.type || "").toLowerCase().trim();
-      const toType = String(pay.to_ledger?.type || pay.toLedger?.type || "").toLowerCase().trim();
-      const partyNameStr = String(pay.party_ledger?.name || pay.party_ledger?.partyName || pay.party?.name || pay.partyName || pay.party_name || "").toLowerCase().trim();
+      // Exclude if party_type is company or party name contains company
+      const partyType = String(pay.party_type || pay.partyType || "").toLowerCase().trim();
+      if (partyType === "company" || partyType.includes("company")) return false;
 
-      if (partyType === "company" || fromType === "company" || toType === "company" || partyNameStr.includes("company")) {
+      const directPartyName = String(pay.partyName || pay.party_name || "").toLowerCase().trim();
+      if (directPartyName.includes("company") || directPartyName.includes("capital") || directPartyName.includes("equity")) {
         return false;
       }
 
       return true;
     })
     .map((pay: any) => {
-      const typeStr = String(pay.type || pay.transaction_type || pay.normalizedType || "").toLowerCase();
-      const isCredit = typeStr === "payment_in" || typeStr === "credit" || typeStr.includes("in");
+      const typeStr = String(pay.type || pay.transaction_type || pay.normalizedType || "").toLowerCase().trim();
+      const isCredit = typeStr === "payment_in" || typeStr === "credit" || typeStr === "receipt" || typeStr.includes("in");
+      const isDebit = typeStr === "payment_out" || typeStr === "debit" || typeStr === "paid" || typeStr.includes("out");
+      const isTransfer = typeStr === "contra" || typeStr === "transfer";
+      const isJournal = typeStr === "journal";
+
       const payDateStr = pay.transaction_date || pay.payment_date || pay.date || (pay.created_at ? String(pay.created_at).split("T")[0] : "");
       const timeVal = pay.created_at
         ? new Date(pay.created_at).getTime()
@@ -199,19 +221,40 @@ export default function HomeContent({
 
       const amount = Number(pay.amount || 0);
 
+      // Determine party/reference display name
+      let displayName = "";
+      if (isTransfer) {
+        const fromName = pay.from_ledger?.name || pay.fromLedger?.name || pay.payment_ledger?.name || "Cash/Bank";
+        const toName = pay.to_ledger?.name || pay.toLedger?.name || pay.party_ledger?.name || "Cash/Bank";
+        displayName = `${fromName} → ${toName}`;
+      } else if (isJournal) {
+        displayName = pay.party_ledger?.name || pay.party?.name || pay.remark || "Journal Entry";
+      } else {
+        displayName = pay.party_ledger?.name || pay.party_ledger?.partyName || pay.party?.name || pay.party?.partyName || pay.partyName || pay.party_name || pay.ledger?.name || (isDebit ? pay.to_ledger?.name : pay.from_ledger?.name) || "Party";
+      }
+
+      let typeLabel = "Payment";
+      if (isCredit) typeLabel = "Payment Received";
+      else if (isDebit) typeLabel = "Payment Out";
+      else if (isTransfer) typeLabel = "Transfer / Contra";
+      else if (isJournal) typeLabel = "Journal";
+
       return {
         id: pay.id,
         number: pay.transaction_number || pay.number || (pay.id ? `TXN-${String(pay.id).slice(0, 8).toUpperCase()}` : "—"),
-        type: isCredit ? "Payment Received" : "Payment Out",
-        partyName: pay.party_ledger?.name || pay.party_ledger?.partyName || pay.party?.name || pay.party?.partyName || pay.partyName || pay.party_name || pay.ledger?.name || "Party",
+        type: typeLabel,
+        typeStr,
+        partyName: displayName,
         amount,
         date: payDateStr || "N/A",
         status: pay.payment_ledger?.name || pay.mode || "Cash",
         timestamp: timeVal,
         isPositive: isCredit,
+        isTransfer,
         rawPay: pay,
       };
-    });
+    })
+    .sort((a, b) => b.timestamp - a.timestamp);
 
   const userName = currentUser?.name?.split(" ")[0] || "User";
 
@@ -381,11 +424,18 @@ export default function HomeContent({
           <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#161B22] border gi-divider shadow-xs space-y-4 w-full">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm sm:text-base font-bold gi-text-primary">
-                  Recent Transactions
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-bold gi-text-primary">
+                    Recent Transactions
+                  </h2>
+                  {recentTransactions.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full gi-badge-info">
+                      {recentTransactions.length}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs gi-text-secondary">
-                  Latest payment and transfer entries
+                  Latest payments, transfers, and general transactions
                 </p>
               </div>
               <Link
@@ -407,111 +457,127 @@ export default function HomeContent({
               </SmoothTransition>
             ) : (
               <SmoothTransition>
-              <>
-                {/* Desktop Table View (Inner Scrollable - 4 items frame) */}
-                <div className="hidden sm:block border gi-divider rounded-xl overflow-hidden shadow-2xs">
-                  <div className="max-h-[230px] overflow-y-auto overflow-x-auto no-scrollbar scrollbar-none" style={{ overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                    <table className="w-full text-left gi-table text-xs">
-                      <thead className="sticky top-0 z-10 gi-surface-secondary shadow-2xs">
-                        <tr>
-                          <th className="p-3">Reference / Party</th>
-                          <th className="p-3">Date</th>
-                          <th className="p-3">Linked Invoice</th>
-                          <th className="p-3 text-right">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y gi-divider">
-                        {recentTransactions.map((tx) => {
-                          const txColor = tx.isPositive
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-600 dark:text-rose-400";
-                          const txSign = tx.isPositive ? "+" : "-";
+                <>
+                  {/* Desktop Table View (Inner Scrollable) */}
+                  <div className="hidden sm:block border gi-divider rounded-xl overflow-hidden shadow-2xs">
+                    <div className="max-h-[350px] overflow-y-auto overflow-x-auto custom-scrollbar">
+                      <table className="w-full text-left gi-table text-xs">
+                        <thead className="sticky top-0 z-10 gi-surface-secondary shadow-2xs">
+                          <tr>
+                            <th className="p-3">Reference / Party</th>
+                            <th className="p-3">Date</th>
+                            <th className="p-3">Linked Invoice</th>
+                            <th className="p-3 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y gi-divider">
+                          {recentTransactions.map((tx) => {
+                            const txColor = tx.isTransfer
+                              ? "text-indigo-600 dark:text-indigo-400"
+                              : tx.isPositive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-600 dark:text-rose-400";
+                            const txSign = tx.isTransfer ? "⇄ " : tx.isPositive ? "+" : "-";
 
-                          const raw = tx.rawPay || {};
-                          const targetInvId = raw.sales_invoice?.id || raw.purchase_invoice?.id || raw.invoice?.id || raw.sales_invoice_id || raw.purchase_invoice_id || raw.invoice_id;
-                          const targetInvNum = raw.sales_invoice?.invoice_number || raw.purchase_invoice?.invoice_number || raw.invoice?.invoice_number || raw.sales_invoice_number || raw.purchase_invoice_number || raw.invoice_number;
+                            const raw = tx.rawPay || {};
+                            const targetInvId = raw.sales_invoice?.id || raw.purchase_invoice?.id || raw.invoice?.id || raw.sales_invoice_id || raw.purchase_invoice_id || raw.invoice_id;
+                            const targetInvNum = raw.sales_invoice?.invoice_number || raw.purchase_invoice?.invoice_number || raw.invoice?.invoice_number || raw.sales_invoice_number || raw.purchase_invoice_number || raw.invoice_number;
 
-                          return (
-                            <tr
-                              key={`pay-${tx.id}`}
-                              onClick={() => {
-                                if (tx.id) {
-                                  router.push(`/paymentDetails/${tx.id}?from=/home`);
-                                } else {
-                                  router.push("/paymentHistory");
-                                }
-                              }}
-                              className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
-                            >
-                              <td className="p-3">
-                                <p className="font-bold gi-text-primary">{tx.partyName}</p>
-                                <p className="text-[11px] gi-text-muted font-mono">{tx.number}</p>
-                              </td>
-                              <td className="p-3 gi-text-secondary whitespace-nowrap">{tx.date}</td>
-                              <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                                {targetInvId ? (
-                                  <Link
-                                    href={`/invoiceDetails/${targetInvId}`}
-                                    className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
-                                  >
-                                    <span>{targetInvNum || `#${targetInvId}`}</span>
-                                  </Link>
-                                ) : targetInvNum ? (
-                                  <span className="font-mono text-xs font-medium gi-text-primary">{targetInvNum}</span>
-                                ) : (
-                                  <span className="gi-text-muted text-xs">—</span>
-                                )}
-                              </td>
-                              <td className="p-3 text-right font-mono font-bold">
-                                <span className={txColor}>
-                                  {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                            return (
+                              <tr
+                                key={`pay-${tx.id}`}
+                                onClick={() => {
+                                  if (tx.id) {
+                                    router.push(`/paymentDetails/${tx.id}?from=/home`);
+                                  } else {
+                                    router.push("/paymentHistory");
+                                  }
+                                }}
+                                className="hover:bg-[var(--gi-hover)] transition cursor-pointer"
+                              >
+                                <td className="p-3">
+                                  <p className="font-bold gi-text-primary">{tx.partyName}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[11px] gi-text-muted font-mono">{tx.number}</span>
+                                    {tx.type && (
+                                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider gi-surface-secondary border gi-border gi-text-secondary">
+                                        {tx.type}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-3 gi-text-secondary whitespace-nowrap">{tx.date}</td>
+                                <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                  {targetInvId ? (
+                                    <Link
+                                      href={`/invoiceDetails/${targetInvId}`}
+                                      className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                                    >
+                                      <span>{targetInvNum || `#${targetInvId}`}</span>
+                                    </Link>
+                                  ) : targetInvNum ? (
+                                    <span className="font-mono text-xs font-medium gi-text-primary">{targetInvNum}</span>
+                                  ) : (
+                                    <span className="gi-text-muted text-xs">—</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right font-mono font-bold">
+                                  <span className={txColor}>
+                                    {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
 
-                {/* Mobile Touch Cards View (Inner Scrollable - 4 items frame) */}
-                <div className="block sm:hidden max-h-[230px] overflow-y-auto space-y-2.5 pr-1 no-scrollbar scrollbar-none" style={{ overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                  {recentTransactions.map((tx) => {
-                    const txColor = tx.isPositive
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-rose-600 dark:text-rose-400";
-                    const txSign = tx.isPositive ? "+" : "-";
+                  {/* Mobile Touch Cards View (Inner Scrollable) */}
+                  <div className="block sm:hidden max-h-[350px] overflow-y-auto space-y-2.5 pr-1.5 custom-scrollbar">
+                    {recentTransactions.map((tx) => {
+                      const txColor = tx.isTransfer
+                        ? "text-indigo-600 dark:text-indigo-400"
+                        : tx.isPositive
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-rose-600 dark:text-rose-400";
+                      const txSign = tx.isTransfer ? "⇄ " : tx.isPositive ? "+" : "-";
 
-                    return (
-                      <div
-                        key={`pay-mobile-${tx.id}`}
-                        onClick={() => {
-                          if (tx.id) {
-                            router.push(`/paymentDetails/${tx.id}?from=/home`);
-                          } else {
-                            router.push("/paymentHistory");
-                          }
-                        }}
-                        className="p-3 rounded-xl gi-surface-secondary border gi-border flex items-center justify-between transition cursor-pointer hover:bg-[var(--gi-hover)]"
-                      >
-                        <div className="min-w-0 flex-1 pr-2">
-                          <p className="font-bold text-xs gi-text-primary truncate">{tx.partyName}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] gi-text-muted font-mono">{tx.number}</span>
-                            <span className="text-[10px] gi-text-secondary">• {tx.date}</span>
+                      return (
+                        <div
+                          key={`pay-mobile-${tx.id}`}
+                          onClick={() => {
+                            if (tx.id) {
+                              router.push(`/paymentDetails/${tx.id}?from=/home`);
+                            } else {
+                              router.push("/paymentHistory");
+                            }
+                          }}
+                          className="p-3 rounded-xl gi-surface-secondary border gi-border flex items-center justify-between transition cursor-pointer hover:bg-[var(--gi-hover)]"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="font-bold text-xs gi-text-primary truncate">{tx.partyName}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] gi-text-muted font-mono">{tx.number}</span>
+                              <span className="text-[10px] gi-text-secondary">• {tx.date}</span>
+                              {tx.type && (
+                                <span className="text-[9px] font-semibold px-1 py-0.2 rounded gi-surface border gi-border gi-text-secondary">
+                                  {tx.type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className={`font-mono font-bold text-xs ${txColor}`}>
+                              {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className={`font-mono font-bold text-xs ${txColor}`}>
-                            {txSign}₹{Math.abs(Number(tx.amount || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+                      );
+                    })}
+                  </div>
+                </>
               </SmoothTransition>
             )}
           </div>

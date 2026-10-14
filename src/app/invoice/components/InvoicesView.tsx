@@ -28,7 +28,7 @@ import { usePreferences } from "@/lib/hooks/usePreferences";
 import { useDebounce } from "@/hooks/useDebounce";
 import PermissionGuard from "@/components/PermissionGuard";
 import { SkeletonBox } from "@/components/Skeleton";
-import { normalizeInvoice, isPurchaseInvoice, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
+import { normalizeInvoice, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
 import FilterTabs from "@/components/FilterTabs";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";

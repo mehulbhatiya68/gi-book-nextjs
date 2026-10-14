@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import AddPurchaseInvoice from "@/app/invoice/components/AddPurchaseInvoice";
+import PurchaseInvoiceForm from "@/app/invoice/components/PurchaseInvoiceForm";
 
 export default function PurchaseInvoicePage() {
   return (
@@ -10,7 +10,7 @@ export default function PurchaseInvoicePage() {
         </div>
       }
     >
-      <AddPurchaseInvoice />
+      <PurchaseInvoiceForm />
     </Suspense>
   );
 }

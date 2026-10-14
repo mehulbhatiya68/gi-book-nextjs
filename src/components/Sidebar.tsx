@@ -19,7 +19,6 @@ import {
   IoChevronBack,
   IoWalletOutline,
   IoSwapHorizontalOutline,
-  IoBusinessOutline,
   IoChevronDown,
   IoAdd,
 } from "react-icons/io5";

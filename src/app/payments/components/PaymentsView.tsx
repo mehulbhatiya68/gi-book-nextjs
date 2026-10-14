@@ -5,17 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IoAdd,
-  IoSearch,
-  IoWalletOutline,
-  IoBusinessOutline,
-  IoCashOutline,
-  IoReceiptOutline,
-  IoArrowForward,
   IoArrowUpOutline,
   IoArrowDownOutline,
   IoSwapVerticalOutline,
-  IoPencilOutline,
-  IoTrashOutline,
   IoClose,
   IoTimeOutline,
 } from "react-icons/io5";

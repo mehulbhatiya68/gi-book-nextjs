@@ -7,14 +7,12 @@ import PageHeader from "@/components/PageHeader";
 import MobiscrollDatePicker from "@/components/MobiscrollDatePicker";
 import CustomSelect from "@/components/CustomSelect";
 import {
-  IoClose,
   IoChevronDown,
   IoDownloadOutline,
   IoPrintOutline,
   IoSearchOutline,
   IoCalendarOutline,
   IoCheckmarkCircle,
-  IoArrowBack,
 } from "react-icons/io5";
 import {
   MdOutlinePointOfSale,
@@ -29,9 +27,7 @@ import {
 } from "react-icons/md";
 import { partyApi } from "@/lib/api/party";
 import { ledgerApi } from "@/lib/api/ledger";
-import { itemApi } from "@/lib/api/item";
 import { invoiceApi } from "@/lib/api/invoice";
-import { paymentApi } from "@/lib/api/payment";
 import { reportsApi } from "@/lib/api/reports";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/lib/hooks/usePreferences";
