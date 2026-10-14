@@ -187,10 +187,15 @@ export function CreateItemModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold gi-text-secondary mb-1">Category</label>
-              <select value={itemType} onChange={(e) => setItemType(e.target.value as any)} className="w-full h-9 px-3 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs focus:outline-none focus:border-indigo-500 font-medium">
-                <option value="Product">Product (Physical)</option>
-                <option value="Service">Service (Labor)</option>
-              </select>
+              <CustomSelect
+                size="sm"
+                value={itemType}
+                onChange={(val) => setItemType(val as any)}
+                options={[
+                  { value: "Product", label: "Product (Physical)" },
+                  { value: "Service", label: "Service (Labor)" },
+                ]}
+              />
             </div>
 
             <div>

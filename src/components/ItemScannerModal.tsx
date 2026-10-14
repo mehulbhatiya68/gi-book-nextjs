@@ -76,7 +76,6 @@ export function ItemScannerModal({
   };
 
   const startCamera = async () => {
-    if (!isMobile) return;
     setErrorMsg("");
     setSuccessMsg("");
     setIsCameraActive(true);
@@ -170,19 +169,24 @@ export function ItemScannerModal({
         const fullRaw = raw.toLowerCase().trim();
 
         matchedItem = (Array.isArray(list) ? list : []).find((i: any) => {
-          const idStr = String(i.id || "").toLowerCase();
-          const codeStr = String(i.item_code || i.itemCode || "").toLowerCase();
-          const qrCodeStr = String(i.qr_code || i.qrCode || "").toLowerCase();
-          const qrPayloadStr = String(i.qr_payload || i.qrPayload || "").toLowerCase();
-          const nameStr = String(i.item_name || i.itemName || "").toLowerCase();
+          const idStr = String(i.id || "").toLowerCase().trim();
+          const codeStr = String(i.item_code || i.itemCode || "").toLowerCase().trim();
+          const barcodeStr = String(i.barcode || i.bar_code || i.sku || "").toLowerCase().trim();
+          const hsnStr = String(i.hsn || i.hsn_code || i.hsn_sac_code || i.hsnCode || "").toLowerCase().trim();
+          const qrCodeStr = String(i.qr_code || i.qrCode || "").toLowerCase().trim();
+          const qrPayloadStr = String(i.qr_payload || i.qrPayload || "").toLowerCase().trim();
+          const nameStr = String(i.item_name || i.itemName || i.name || "").toLowerCase().trim();
 
           return (
             idStr === searchVal ||
             codeStr === searchVal ||
+            barcodeStr === searchVal ||
+            hsnStr === searchVal ||
             qrCodeStr === searchVal ||
             qrPayloadStr === fullRaw ||
             qrPayloadStr.includes(searchVal) ||
-            nameStr === searchVal
+            nameStr === searchVal ||
+            (searchVal.length >= 3 && (codeStr.includes(searchVal) || barcodeStr.includes(searchVal)))
           );
         });
       }
@@ -288,9 +292,7 @@ export function ItemScannerModal({
             <div>
               <h3 className="text-sm font-bold gi-text-primary">Scan Barcode / QR Code</h3>
               <p className="text-[11px] gi-text-secondary">
-                {isMobile
-                  ? "Scan via device camera, upload image or input code"
-                  : "Upload image to scan or input barcode / QR code"}
+                Scan via camera, upload image or input code
               </p>
             </div>
           </div>
@@ -303,36 +305,34 @@ export function ItemScannerModal({
           </button>
         </div>
 
-        {/* Live Camera Scanner Box (Mobile Devices Only) */}
-        {isMobile && (
-          <div className="block md:hidden">
-            {isCameraActive ? (
-              <div className="space-y-3">
-                <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-indigo-500 shadow-inner flex flex-col items-center justify-center min-h-[240px]">
-                  <div id="camera-reader" className="w-full h-full min-h-[240px]" />
-                </div>
-                <button
-                  type="button"
-                  onClick={stopCamera}
-                  className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition shadow-xs"
-                >
-                  <IoStopCircleOutline className="text-lg" />
-                  <span>Stop Camera Scanner</span>
-                </button>
+        {/* Live Camera Scanner Box */}
+        <div>
+          {isCameraActive ? (
+            <div className="space-y-3">
+              <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-indigo-500 shadow-inner flex flex-col items-center justify-center min-h-[240px]">
+                <div id="camera-reader" className="w-full h-full min-h-[240px]" />
               </div>
-            ) : (
               <button
                 type="button"
-                onClick={startCamera}
-                disabled={isSearching}
-                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition shadow-md"
+                onClick={stopCamera}
+                className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition shadow-xs"
               >
-                <IoCameraOutline className="text-lg" />
-                <span>Start Live Camera Scanner</span>
+                <IoStopCircleOutline className="text-lg" />
+                <span>Stop Camera Scanner</span>
               </button>
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={startCamera}
+              disabled={isSearching}
+              className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition shadow-md"
+            >
+              <IoCameraOutline className="text-lg" />
+              <span>Start Live Camera Scanner</span>
+            </button>
+          )}
+        </div>
 
         {/* Manual Barcode Input */}
         <form onSubmit={handleFormSubmit} className="space-y-2 pt-1">

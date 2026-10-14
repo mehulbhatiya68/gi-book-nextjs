@@ -21,6 +21,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import PaginationControls from "@/components/PaginationControls";
 import { SkeletonBox, SkeletonCard } from "@/components/Skeleton";
 import FilterTabs from "@/components/FilterTabs";
+import CustomSelect from "@/components/CustomSelect";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -63,21 +64,24 @@ export default function Parties() {
     }
   }, [activeBusiness?.id]);
 
-  const { totalReceivables, totalPayables } = useMemo(() => {
-    let rec = 0;
-    let pay = 0;
-    parties.forEach((p: any) => {
-      const pType = String(p.type || p.partyType || p.party_type || "").toLowerCase();
-      const isSupplier = pType === "supplier" || p.is_supplier === true || p.is_supplier === 1;
-      const bal = Math.abs(Number(p.current_balance ?? p.closing_balance ?? p.closingBalance ?? p.net_balance ?? p.balance ?? p.opening_balance ?? 0));
-      if (isSupplier) {
-        pay += bal;
-      } else {
-        rec += bal;
+  const getPartyBalanceLabel = (party: any, balance: number) => {
+    if (balance === 0) return "Settled";
+
+    const pType = String(party.type || party.partyType || party.party_type || "").toLowerCase();
+    const isSupplier = pType === "supplier" || party.is_supplier === true || party.is_supplier === 1;
+
+    if (isSupplier) {
+      if (balance > 0) {
+        return "to receive invoices of amount ";
       }
-    });
-    return { totalReceivables: rec, totalPayables: pay };
-  }, [parties]);
+      return "To Pay";
+    } else {
+      if (balance < 0) {
+        return "to provide invoices of amount ";
+      }
+      return "To Receive";
+    }
+  };
 
   const filteredParties = useMemo(() => {
     const query = debouncedSearch.toLowerCase().trim();
@@ -181,16 +185,17 @@ export default function Parties() {
 
           {/* Mobile Single Dropdown Filter (renders exactly 1 filter on mobile) */}
           <div className="sm:hidden">
-            <select
+            <CustomSelect
+              size="xs"
               value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value)}
-              className="w-full h-8 px-3 rounded-xl border gi-border bg-[var(--gi-card-bg)] gi-text-primary text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-2xs"
-            >
-              <option value="all">All Parties</option>
-              <option value="customers">Customers</option>
-              <option value="suppliers">Suppliers</option>
-              <option value="other">Others</option>
-            </select>
+              onChange={setActiveFilter}
+              options={[
+                { value: "all", label: "All Parties" },
+                { value: "customers", label: "Customers" },
+                { value: "suppliers", label: "Suppliers" },
+                { value: "other", label: "Others" },
+              ]}
+            />
           </div>
 
           {/* Desktop Filter Pills */}
@@ -208,37 +213,6 @@ export default function Parties() {
           />
         </div>
 
-        {/* Financial Balance Summaries */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Customer Receivables (To Receive)
-              </p>
-              <p className="text-lg sm:text-xl font-bold font-mono mt-0.5" style={{ color: "var(--gi-success)" }}>
-                ₹{Number(totalReceivables).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <span className="p-2 rounded-lg gi-badge-success text-lg">
-              <IoPeopleOutline />
-            </span>
-          </div>
-
-          <div className="p-3 rounded-xl gi-card shadow-xs flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold gi-text-secondary uppercase tracking-wider">
-                Supplier Payables (To Pay)
-              </p>
-              <p className="text-lg sm:text-xl font-bold font-mono mt-0.5" style={{ color: "var(--gi-danger)" }}>
-                ₹{Number(totalPayables).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <span className="p-2 rounded-lg gi-badge-danger text-lg">
-              <IoPeopleOutline />
-            </span>
-          </div>
-        </div>
-
         {/* Mobile Responsive Cards View (< 768px) */}
         <div className="block md:hidden space-y-3">
           {isLoading ? (
@@ -251,10 +225,9 @@ export default function Parties() {
             sortedParties.map((party: any) => {
               const pName = party.name || party.partyName || "Party";
               const pType = party.type || party.partyType || party.party_type || "Customer";
-              const isSupplier = String(pType).toLowerCase() === "supplier" || party.is_supplier === true || party.is_supplier === 1;
               const pPhone = party.contact_number || party.phone || party.mobile || "";
               const balance = Number(party.current_balance ?? party.closing_balance ?? party.closingBalance ?? party.net_balance ?? party.balance ?? party.opening_balance ?? 0);
-              const labelText = balance === 0 ? "Settled" : isSupplier ? "To Pay" : "To Receive";
+              const labelText = getPartyBalanceLabel(party, balance);
 
               return (
                 <div
@@ -363,11 +336,10 @@ export default function Parties() {
                   sortedParties.map((party: any) => {
                     const pName = party.name || party.partyName || "Party";
                     const pType = party.type || party.partyType || party.party_type || "Customer";
-                    const isSupplier = String(pType).toLowerCase() === "supplier" || party.is_supplier === true || party.is_supplier === 1;
                     const pPhone = party.contact_number || party.phone || party.mobile || "";
                     const pGst = party.gst_number || party.gstNumber || party.gstin || "";
                     const balance = Number(party.current_balance ?? party.closing_balance ?? party.closingBalance ?? party.net_balance ?? party.balance ?? party.opening_balance ?? 0);
-                    const balanceLabel = balance === 0 ? "Settled" : isSupplier ? "To Pay" : "To Receive";
+                    const balanceLabel = getPartyBalanceLabel(party, balance);
 
                     return (
                       <tr

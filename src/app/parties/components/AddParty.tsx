@@ -19,6 +19,7 @@ import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
 import { SkeletonBox } from "@/components/Skeleton";
+import CustomSelect from "@/components/CustomSelect";
 
 export default function AddParty() {
     const router = useRouter();
@@ -397,14 +398,13 @@ export default function AddParty() {
                                 className="flex-1 px-3.5 py-2 rounded-lg text-sm gi-input focus:outline-none font-bold"
                             />
 
-                            <select
+                            <CustomSelect
+                                size="sm"
+                                className="w-full sm:w-40"
                                 value={balanceType}
-                                onChange={(e) => setBalanceType(e.target.value)}
-                                className="w-full sm:w-40 px-3.5 py-2 rounded-lg text-sm gi-input focus:outline-none cursor-pointer"
-                            >
-                                <option value="To Receive">To Receive</option>
-                                <option value="To Pay">To Pay</option>
-                            </select>
+                                onChange={(val) => setBalanceType(String(val))}
+                                options={["To Receive", "To Pay"]}
+                            />
                         </div>
                     </div>
 

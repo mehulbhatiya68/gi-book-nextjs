@@ -62,6 +62,7 @@ import { businessApi } from "@/lib/api/business";
 import { updateBusinessProfileAction } from "@/app/actions/business";
 import CustomBusinessLogo from "@/components/CustomBusinessLogo";
 import FilterTabs from "@/components/FilterTabs";
+import CustomSelect from "@/components/CustomSelect";
 import { authApi } from "@/lib/api/auth";
 import { settingsApi } from "@/lib/api/settings";
 import { subscriptionApi } from "@/lib/api/subscription";
@@ -1398,52 +1399,57 @@ export default function Settings() {
                     <label className="block font-semibold gi-text-secondary text-xs mb-1">
                       Billing Currency
                     </label>
-                    <select
+                    <CustomSelect
+                      size="sm"
                       value={businessSettings.currency}
-                      onChange={(e) => setBusinessSettings({ ...businessSettings, currency: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border-none bg-slate-50 dark:bg-zinc-800 gi-text-primary text-xs focus:outline-none cursor-pointer"
-                    >
-                      <option value="INR">INR (₹ Indian Rupee)</option>
-                      <option value="USD">USD ($ US Dollar)</option>
-                      <option value="EUR">EUR (€ Euro)</option>
-                      <option value="GBP">GBP (£ British Pound)</option>
-                      <option value="AED">AED (د.إ UAE Dirham)</option>
-                      <option value="CAD">CAD ($ Canadian Dollar)</option>
-                      <option value="AUD">AUD ($ Australian Dollar)</option>
-                    </select>
+                      onChange={(val) => setBusinessSettings({ ...businessSettings, currency: String(val) })}
+                      options={[
+                        { value: "INR", label: "INR (₹ Indian Rupee)" },
+                        { value: "USD", label: "USD ($ US Dollar)" },
+                        { value: "EUR", label: "EUR (€ Euro)" },
+                        { value: "GBP", label: "GBP (£ British Pound)" },
+                        { value: "AED", label: "AED (د.إ UAE Dirham)" },
+                        { value: "CAD", label: "CAD ($ Canadian Dollar)" },
+                        { value: "AUD", label: "AUD ($ Australian Dollar)" },
+                      ]}
+                      searchable
+                    />
                   </div>
 
                   <div>
                     <label className="block font-semibold gi-text-secondary text-xs mb-1">
                       Timezone
                     </label>
-                    <select
+                    <CustomSelect
+                      size="sm"
                       value={businessSettings.timezone}
-                      onChange={(e) => setBusinessSettings({ ...businessSettings, timezone: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border-none bg-slate-50 dark:bg-zinc-800 gi-text-primary text-xs focus:outline-none cursor-pointer"
-                    >
-                      <option value="Asia/Kolkata">Asia/Kolkata (IST +5:30)</option>
-                      <option value="UTC">UTC (Coordinated Universal Time)</option>
-                      <option value="America/New_York">America/New_York (EST)</option>
-                      <option value="Europe/London">Europe/London (GMT/BST)</option>
-                      <option value="Asia/Dubai">Asia/Dubai (GST +4:00)</option>
-                      <option value="Asia/Singapore">Asia/Singapore (SGT +8:00)</option>
-                    </select>
+                      onChange={(val) => setBusinessSettings({ ...businessSettings, timezone: String(val) })}
+                      options={[
+                        { value: "Asia/Kolkata", label: "Asia/Kolkata (IST +5:30)" },
+                        { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+                        { value: "America/New_York", label: "America/New_York (EST)" },
+                        { value: "Europe/London", label: "Europe/London (GMT/BST)" },
+                        { value: "Asia/Dubai", label: "Asia/Dubai (GST +4:00)" },
+                        { value: "Asia/Singapore", label: "Asia/Singapore (SGT +8:00)" },
+                      ]}
+                      searchable
+                    />
                   </div>
 
                   <div>
                     <label className="block font-semibold gi-text-secondary text-xs mb-1">
                       System Language
                     </label>
-                    <select
+                    <CustomSelect
+                      size="sm"
                       value={businessSettings.language}
-                      onChange={(e) => setBusinessSettings({ ...businessSettings, language: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border-none bg-slate-50 dark:bg-zinc-800 gi-text-primary text-xs focus:outline-none cursor-pointer"
-                    >
-                      <option value="en">English (en)</option>
-                      <option value="hi">हिंदी (hi)</option>
-                      <option value="gu">ગુજરાતી (gu)</option>
-                    </select>
+                      onChange={(val) => setBusinessSettings({ ...businessSettings, language: String(val) })}
+                      options={[
+                        { value: "en", label: "English (en)" },
+                        { value: "hi", label: "हिंदी (hi)" },
+                        { value: "gu", label: "ગુજરાતી (gu)" },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -2772,15 +2778,17 @@ export default function Settings() {
                     <span className="font-semibold text-xs gi-text-primary">Language</span>
                   </div>
 
-                  <select
+                  <CustomSelect
+                    size="xs"
+                    className="w-32"
                     value={language || "en"}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="bg-transparent border-none rounded-md text-xs gi-text-primary px-2 py-1 outline-none cursor-pointer"
-                  >
-                    <option value="en">English</option>
-                    <option value="hi">हिंदी</option>
-                    <option value="gu">ગુજરાતી</option>
-                  </select>
+                    onChange={(val) => setLanguage(String(val))}
+                    options={[
+                      { value: "en", label: "English" },
+                      { value: "hi", label: "हिंदी" },
+                      { value: "gu", label: "ગુજરાતી" },
+                    ]}
+                  />
                 </div>
 
                 <button

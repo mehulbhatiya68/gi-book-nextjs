@@ -16,7 +16,10 @@ import {
   IoReceiptOutline,
   IoCubeOutline,
   IoBriefcaseOutline,
+  IoBarcodeOutline,
+  IoScanOutline,
 } from "react-icons/io5";
+import { ItemScannerModal } from "@/components/ItemScannerModal";
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
 import { usePreferences } from "@/lib/hooks/usePreferences";
@@ -27,6 +30,7 @@ import { ledgerApi } from "@/lib/api/ledger";
 import { settingsApi } from "@/lib/api/settings";
 import MobiscrollDatePicker from "@/components/MobiscrollDatePicker";
 import QuantityStepper from "@/components/QuantityStepper";
+import CustomSelect from "@/components/CustomSelect";
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
@@ -73,6 +77,7 @@ export default function PurchaseInvoiceForm() {
   const [showInvoicePopup, setShowInvoicePopup] = useState(false);
   const [showPartyPopup, setShowPartyPopup] = useState(false);
   const [showItemPopup, setShowItemPopup] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
 
@@ -421,6 +426,50 @@ export default function PurchaseInvoiceForm() {
           lineTotal,
         },
       ]);
+    }
+  };
+
+  const handleScanSuccess = (scannedCode: string, matchedItem?: any) => {
+    let itemToAdd = matchedItem;
+
+    if (!itemToAdd) {
+      const searchVal = scannedCode.toLowerCase().trim();
+      itemToAdd = items.find((i: any) => {
+        const idStr = String(i.id || "").toLowerCase().trim();
+        const codeStr = String(i.item_code || i.itemCode || "").toLowerCase().trim();
+        const barcodeStr = String(i.barcode || i.bar_code || i.sku || "").toLowerCase().trim();
+        const hsnStr = String(i.hsn || i.hsn_code || i.hsn_sac_code || i.hsnCode || "").toLowerCase().trim();
+        const qrCodeStr = String(i.qr_code || i.qrCode || "").toLowerCase().trim();
+        const nameStr = String(i.item_name || i.itemName || i.name || "").toLowerCase().trim();
+        return (
+          idStr === searchVal ||
+          codeStr === searchVal ||
+          barcodeStr === searchVal ||
+          hsnStr === searchVal ||
+          qrCodeStr === searchVal ||
+          nameStr === searchVal ||
+          (searchVal.length >= 3 && (codeStr.includes(searchVal) || barcodeStr.includes(searchVal)))
+        );
+      });
+    }
+
+    if (!itemToAdd) {
+      toast.error(`No item found matching barcode "${scannedCode}".`);
+      return;
+    }
+
+    const itemId = itemToAdd.id || itemToAdd.item_id;
+    const existingItem = selectedItems.find(
+      (si: any) => (si.id || si.item_id) === itemId
+    );
+    const itemName = getItemName(itemToAdd);
+
+    if (existingItem) {
+      handlePopupQuantityChange(itemToAdd, 1);
+      toast.success(`Incremented quantity for "${itemName}" in invoice!`);
+    } else {
+      handleToggleItem(itemToAdd);
+      toast.success(`Added "${itemName}" to invoice!`);
     }
   };
 
@@ -1052,14 +1101,25 @@ export default function PurchaseInvoiceForm() {
                 <p className="text-xs text-slate-500 dark:text-zinc-400">Add inventory products or services to this bill</p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowItemPopup(true)}
-                className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition cursor-pointer shadow-sm"
-              >
-                <IoAdd className="text-base" />
-                <span>Add Items</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowScannerModal(true)}
+                  className="h-8 px-3 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                  title="Scan barcode with camera, image, or reader"
+                >
+                  <IoBarcodeOutline className="text-base" />
+                  <span>Scan Barcode</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowItemPopup(true)}
+                  className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition cursor-pointer shadow-sm"
+                >
+                  <IoAdd className="text-base" />
+                  <span>Add Items</span>
+                </button>
+              </div>
             </div>
 
             {/* Mobile Header & Item List (Exact Reference Design) */}
@@ -1141,15 +1201,25 @@ export default function PurchaseInvoiceForm() {
                 </div>
               )}
 
-              {/* Dashed Add Items Button */}
-              <button
-                type="button"
-                onClick={() => setShowItemPopup(true)}
-                className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 font-bold text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-2xs"
-              >
-                <IoAdd className="text-lg" />
-                <span>Add Items</span>
-              </button>
+              {/* Action Buttons: Scan Barcode & Add Items */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowScannerModal(true)}
+                  className="flex-1 py-3 px-3 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+                >
+                  <IoBarcodeOutline className="text-base" />
+                  <span>Scan Barcode</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowItemPopup(true)}
+                  className="flex-1 py-3 px-4 rounded-2xl border-2 border-dashed border-slate-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+                >
+                  <IoAdd className="text-base" />
+                  <span>Add Items</span>
+                </button>
+              </div>
             </div>
 
             {/* Desktop Items Table View */}
@@ -1215,24 +1285,25 @@ export default function PurchaseInvoiceForm() {
                             </td>
 
                             {/* GST Tax Dropdown */}
-                            <td className="py-3 px-3.5">
-                              <select
+                            <td className="py-3 px-3.5 min-w-[130px]">
+                              <CustomSelect
+                                size="xs"
                                 value={currentGstRate}
-                                onChange={(e) =>
+                                onChange={(val) =>
                                   handleUpdateItemInline(
                                     itemId,
                                     "gstRate",
-                                    Number(e.target.value)
+                                    Number(val)
                                   )
                                 }
-                                className="w-full h-8 px-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer focus:bg-white dark:focus:bg-zinc-900"
-                              >
-                                <option value={0}>None (0%)</option>
-                                <option value={5}>GST @ 5%</option>
-                                <option value={12}>GST @ 12%</option>
-                                <option value={18}>GST @ 18%</option>
-                                <option value={28}>GST @ 28%</option>
-                              </select>
+                                options={[
+                                  { value: 0, label: "None (0%)" },
+                                  { value: 5, label: "GST @ 5%" },
+                                  { value: 12, label: "GST @ 12%" },
+                                  { value: 18, label: "GST @ 18%" },
+                                  { value: 28, label: "GST @ 28%" },
+                                ]}
+                              />
                             </td>
 
                             {/* Quantity Input */}
@@ -1501,16 +1572,13 @@ export default function PurchaseInvoiceForm() {
                   <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
                     Payment Mode:
                   </label>
-                  <select
+                  <CustomSelect
+                    size="xs"
+                    className="w-36"
                     value={paymentMode}
-                    onChange={(e) => setPaymentMode(e.target.value)}
-                    className="h-8 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 text-xs text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
+                    onChange={(val) => setPaymentMode(String(val))}
+                    options={["Cash", "Bank Transfer", "UPI", "Cheque"]}
+                  />
                 </div>
               )}
             </div>
@@ -1739,16 +1807,27 @@ export default function PurchaseInvoiceForm() {
               </button>
             </div>
 
-            <div className="relative mb-3">
-              <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-              <input
-                type="text"
-                value={itemSearch}
-                onChange={(e) => setItemSearch(e.target.value)}
-                placeholder="Search by HSN / Name..."
-                autoFocus
-                className="w-full h-8 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white pl-9 pr-3 text-xs outline-none focus:border-indigo-500"
-              />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <IoSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                <input
+                  type="text"
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                  placeholder="Search by HSN / Name..."
+                  autoFocus
+                  className="w-full h-8 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white pl-9 pr-3 text-xs outline-none focus:border-indigo-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScannerModal(true)}
+                className="h-8 px-3 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 transition"
+                title="Scan item barcode"
+              >
+                <IoBarcodeOutline className="text-base" />
+                <span className="hidden sm:inline">Scan Barcode</span>
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-1.5 max-h-[45vh] pr-1">
@@ -1980,14 +2059,15 @@ export default function PurchaseInvoiceForm() {
                   <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                     Purchase Tax Type
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={newItemPurchaseTaxType}
-                    onChange={(e) => setNewItemPurchaseTaxType(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="Without Tax">Without Tax (Exclusive)</option>
-                    <option value="With Tax">With Tax (Inclusive)</option>
-                  </select>
+                    onChange={(val) => setNewItemPurchaseTaxType(String(val))}
+                    options={[
+                      { value: "Without Tax", label: "Without Tax (Exclusive)" },
+                      { value: "With Tax", label: "With Tax (Inclusive)" },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -2011,14 +2091,15 @@ export default function PurchaseInvoiceForm() {
                   <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                     Sales Tax Type
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={newItemSalesTaxType}
-                    onChange={(e) => setNewItemSalesTaxType(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="Without Tax">Without Tax (Exclusive)</option>
-                    <option value="With Tax">With Tax (Inclusive)</option>
-                  </select>
+                    onChange={(val) => setNewItemSalesTaxType(String(val))}
+                    options={[
+                      { value: "Without Tax", label: "Without Tax (Exclusive)" },
+                      { value: "With Tax", label: "With Tax (Inclusive)" },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -2028,40 +2109,31 @@ export default function PurchaseInvoiceForm() {
                   <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                     Unit
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={newItemUnit}
-                    onChange={(e) => setNewItemUnit(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="PCS">PCS</option>
-                    <option value="KG">KG</option>
-                    <option value="G">G</option>
-                    <option value="L">L</option>
-                    <option value="ML">ML</option>
-                    <option value="M">M</option>
-                    <option value="FT">FT</option>
-                    <option value="BOX">BOX</option>
-                    <option value="PKT">PKT</option>
-                    <option value="SET">SET</option>
-                  </select>
+                    onChange={(val) => setNewItemUnit(String(val))}
+                    options={["PCS", "KG", "G", "L", "ML", "M", "FT", "BOX", "PKT", "SET"]}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                     GST Tax Rate
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={newItemGst}
-                    onChange={(e) => setNewItemGst(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value="None">None (0%)</option>
-                    <option value="GST @ 0%">GST @ 0%</option>
-                    <option value="GST @ 5%">GST @ 5%</option>
-                    <option value="GST @ 12%">GST @ 12%</option>
-                    <option value="GST @ 18%">GST @ 18%</option>
-                    <option value="GST @ 28%">GST @ 28%</option>
-                  </select>
+                    onChange={(val) => setNewItemGst(String(val))}
+                    options={[
+                      { value: "None", label: "None (0%)" },
+                      { value: "GST @ 0%", label: "GST @ 0%" },
+                      { value: "GST @ 5%", label: "GST @ 5%" },
+                      { value: "GST @ 12%", label: "GST @ 12%" },
+                      { value: "GST @ 18%", label: "GST @ 18%" },
+                      { value: "GST @ 28%", label: "GST @ 28%" },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -2214,16 +2286,18 @@ export default function PurchaseInvoiceForm() {
                     Discount
                   </label>
                   <div className="flex items-center gap-1">
-                    <select
+                    <CustomSelect
+                      size="sm"
+                      className="w-20"
                       value={editingItem.editDiscountType}
-                      onChange={(e) =>
-                        setEditingItem({ ...editingItem, editDiscountType: e.target.value })
+                      onChange={(val) =>
+                        setEditingItem({ ...editingItem, editDiscountType: String(val) })
                       }
-                      className="h-9 px-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 font-semibold text-slate-700 dark:text-zinc-300 text-xs outline-none"
-                    >
-                      <option value="percent">%</option>
-                      <option value="amount">₹</option>
-                    </select>
+                      options={[
+                        { value: "percent", label: "%" },
+                        { value: "amount", label: "₹" },
+                      ]}
+                    />
                     <input
                       type="number"
                       step="any"
@@ -2245,40 +2319,42 @@ export default function PurchaseInvoiceForm() {
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                     GST Rate
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={editingItem.editGstRate}
-                    onChange={(e) => {
-                      const rate = Number(e.target.value);
+                    onChange={(val) => {
+                      const rate = Number(val);
                       setEditingItem({
                         ...editingItem,
                         editGstRate: rate,
                         editGst: rate > 0 ? `GST @ ${rate}%` : "None",
                       });
                     }}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-medium text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  >
-                    <option value={0}>None / Exempt (0%)</option>
-                    <option value={5}>GST @ 5%</option>
-                    <option value={12}>GST @ 12%</option>
-                    <option value={18}>GST @ 18%</option>
-                    <option value={28}>GST @ 28%</option>
-                  </select>
+                    options={[
+                      { value: 0, label: "None / Exempt (0%)" },
+                      { value: 5, label: "GST @ 5%" },
+                      { value: 12, label: "GST @ 12%" },
+                      { value: 18, label: "GST @ 18%" },
+                      { value: 28, label: "GST @ 28%" },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
                     Tax Type
                   </label>
-                  <select
+                  <CustomSelect
+                    size="sm"
                     value={editingItem.editTaxType}
-                    onChange={(e) =>
-                      setEditingItem({ ...editingItem, editTaxType: e.target.value })
+                    onChange={(val) =>
+                      setEditingItem({ ...editingItem, editTaxType: String(val) })
                     }
-                    className="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-medium text-slate-900 dark:text-white outline-none focus:border-indigo-500"
-                  >
-                    <option value="Without Tax">Without Tax (Exclusive)</option>
-                    <option value="With Tax">With Tax (Inclusive)</option>
-                  </select>
+                    options={[
+                      { value: "Without Tax", label: "Without Tax (Exclusive)" },
+                      { value: "With Tax", label: "With Tax (Inclusive)" },
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -2302,6 +2378,12 @@ export default function PurchaseInvoiceForm() {
           </div>
         </div>
       )}
+      {/* Barcode Scanner Modal */}
+      <ItemScannerModal
+        isOpen={showScannerModal}
+        onClose={() => setShowScannerModal(false)}
+        onScanSuccess={handleScanSuccess}
+      />
     </div>
   );
 }

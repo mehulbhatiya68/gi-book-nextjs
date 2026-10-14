@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { IoChevronDown, IoCheckmark } from "react-icons/io5";
+import { IoChevronDown, IoCheckmark, IoSearchOutline } from "react-icons/io5";
 
 export interface SelectOption {
   value: string | number;
@@ -12,15 +12,20 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
+export type SelectOptionInput = SelectOption | string | number;
+
 export interface CustomSelectProps {
-  options: SelectOption[];
-  value: string | number;
-  onChange: (value: string) => void;
+  options: SelectOptionInput[];
+  value?: string | number;
+  onChange: (value: any) => void;
   placeholder?: string;
   label?: string;
   disabled?: boolean;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  buttonClassName?: string;
+  size?: "xs" | "sm" | "md" | "lg";
+  searchable?: boolean;
+  align?: "left" | "right";
 }
 
 export default function CustomSelect({
@@ -30,14 +35,49 @@ export default function CustomSelect({
   placeholder = "Select an option...",
   disabled = false,
   className = "",
+  buttonClassName = "",
   size = "md",
+  searchable,
+  align = "left",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Normalize all options to standard SelectOption objects
+  const normalizedOptions = useMemo<SelectOption[]>(() => {
+    return (options || []).map((opt) => {
+      if (typeof opt === "string" || typeof opt === "number") {
+        return { value: opt, label: String(opt) };
+      }
+      return opt;
+    });
+  }, [options]);
 
   const selectedOption = useMemo(() => {
-    return options.find((opt) => String(opt.value) === String(value));
-  }, [options, value]);
+    if (value === undefined || value === null) return undefined;
+    return normalizedOptions.find((opt) => String(opt.value) === String(value));
+  }, [normalizedOptions, value]);
+
+  // Determine whether to show search input
+  const showSearch = useMemo(() => {
+    if (searchable !== undefined) return searchable;
+    return normalizedOptions.length > 8;
+  }, [searchable, normalizedOptions.length]);
+
+  // Filtered options based on search query
+  const filteredOptions = useMemo(() => {
+    if (!showSearch || !searchQuery.trim()) return normalizedOptions;
+    const query = searchQuery.toLowerCase().trim();
+    return normalizedOptions.filter((opt) => {
+      const matchLabel = opt.label.toLowerCase().includes(query);
+      const matchSublabel = opt.sublabel?.toLowerCase().includes(query);
+      const matchBadge = opt.badge?.toLowerCase().includes(query);
+      const matchValue = String(opt.value).toLowerCase().includes(query);
+      return matchLabel || matchSublabel || matchBadge || matchValue;
+    });
+  }, [normalizedOptions, showSearch, searchQuery]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -61,12 +101,31 @@ export default function CustomSelect({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
+  // Focus search input on open
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery("");
+      if (showSearch) {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+      }
+    }
+  }, [isOpen, showSearch]);
+
   const handleSelect = (optionVal: string | number) => {
-    onChange(String(optionVal));
+    onChange(optionVal);
     setIsOpen(false);
   };
 
-  const pyClass = size === "sm" ? "py-1.5 px-3 text-xs" : size === "lg" ? "py-3 px-4 text-sm" : "py-2.5 px-3.5 text-xs";
+  const sizeClasses = {
+    xs: "h-8 py-1 px-2.5 text-xs rounded-lg",
+    sm: "h-9 py-1.5 px-3 text-xs rounded-xl",
+    md: "h-10 py-2 px-3.5 text-xs sm:text-sm rounded-xl",
+    lg: "h-11 py-2.5 px-4 text-sm rounded-xl",
+  };
+
+  const pyClass = sizeClasses[size] || sizeClasses.md;
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
@@ -75,13 +134,13 @@ export default function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full ${pyClass} rounded-xl border transition-all duration-200 flex items-center justify-between gap-2 text-left cursor-pointer outline-none ${
+        className={`w-full ${pyClass} border transition-all duration-200 flex items-center justify-between gap-2 text-left cursor-pointer outline-none ${
           disabled ? "opacity-50 cursor-not-allowed bg-slate-100 dark:bg-zinc-800" : ""
         } ${
           isOpen
             ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-white dark:bg-zinc-900 shadow-md"
             : "border-slate-300 dark:border-zinc-700 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs"
-        }`}
+        } ${buttonClassName}`}
       >
         <div className="flex items-center gap-2 truncate min-w-0">
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
@@ -112,21 +171,43 @@ export default function CustomSelect({
 
       {/* Floating Glassmorphism Dropdown Popover */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-indigo-200/60 dark:border-indigo-900/60 p-2 shadow-2xl space-y-1 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div
+          className={`absolute top-full ${
+            align === "right" ? "right-0" : "left-0"
+          } min-w-full w-max max-w-[calc(100vw-2rem)] sm:max-w-md mt-1.5 z-[100] rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-indigo-200/60 dark:border-indigo-900/60 p-2 shadow-2xl space-y-1 animate-in fade-in slide-in-from-top-2 duration-150`}
+        >
+          {/* Optional Search Input */}
+          {showSearch && (
+            <div className="p-1 pb-1.5 border-b border-slate-100 dark:border-zinc-800/80 mb-1">
+              <div className="relative flex items-center">
+                <IoSearchOutline className="absolute left-2.5 text-slate-400 text-xs pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search options..."
+                  className="w-full h-7 pl-7 pr-2 text-xs rounded-lg bg-slate-100 dark:bg-zinc-800 border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-zinc-900 outline-none text-slate-800 dark:text-zinc-200 transition"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Options List */}
           <div className="max-h-56 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-            {options.length === 0 ? (
+            {filteredOptions.length === 0 ? (
               <div className="py-4 text-center text-xs text-slate-400 dark:text-zinc-500 font-medium">
-                No options available
+                {searchQuery ? "No matching options found" : "No options available"}
               </div>
             ) : (
-              options.map((opt, index) => {
+              filteredOptions.map((opt, index) => {
                 const isSelected = String(opt.value) === String(value);
                 return (
                   <div
                     key={`${String(opt.value)}-${index}`}
                     onClick={() => !opt.disabled && handleSelect(opt.value)}
-                    className={`p-2.5 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-all ${
                       opt.disabled ? "opacity-40 cursor-not-allowed" : ""
                     } ${
                       isSelected
@@ -168,4 +249,3 @@ export default function CustomSelect({
     </div>
   );
 }
-

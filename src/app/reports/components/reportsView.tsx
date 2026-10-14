@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import MobiscrollDatePicker from "@/components/MobiscrollDatePicker";
+import CustomSelect from "@/components/CustomSelect";
 import {
   IoClose,
   IoChevronDown,
@@ -2339,28 +2340,30 @@ export default function ReportsView() {
               {selectedReport.partySelector && (
                 <div className="sm:col-span-2 lg:col-span-1">
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--gi-text-secondary)" }}>Select Party / Ledger *</label>
-                  <div className="relative">
-                    <select value={selectedParty} onChange={(e) => setSelectedParty(e.target.value)} className="w-full h-9 appearance-none rounded-lg px-3 pr-10 outline-none cursor-pointer text-xs sm:text-sm font-medium gi-input">
-                      {parties.map((party) => (
-                        <option key={party.id} value={party.id}>{getPartyName(party)} ({party.partyType || "Customer/Supplier"})</option>
-                      ))}
-                    </select>
-                    <IoChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-base" style={{ color: "var(--gi-text-muted)" }} />
-                  </div>
+                  <CustomSelect
+                    size="sm"
+                    value={selectedParty}
+                    onChange={(val) => setSelectedParty(String(val))}
+                    placeholder="Select Party / Ledger"
+                    options={parties.map((party) => ({
+                      value: party.id,
+                      label: getPartyName(party),
+                      badge: party.partyType || "Customer/Supplier",
+                    }))}
+                    searchable
+                  />
                 </div>
               )}
 
               {!selectedReport.noDateRange && (
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--gi-text-secondary)" }}>Date Period</label>
-                  <div className="relative">
-                    <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="w-full h-9 appearance-none rounded-lg px-3 pr-10 outline-none cursor-pointer text-xs sm:text-sm font-medium gi-input">
-                      {dateOptions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <IoChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-base" style={{ color: "var(--gi-text-muted)" }} />
-                  </div>
+                  <CustomSelect
+                    size="sm"
+                    value={dateRange}
+                    onChange={(val) => setDateRange(String(val))}
+                    options={dateOptions}
+                  />
                 </div>
               )}
 
