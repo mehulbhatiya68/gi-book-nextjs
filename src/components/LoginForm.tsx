@@ -70,7 +70,7 @@ export default function LoginForm() {
     try {
       const result = await loginUser(email, password, loginType);
       if (result.success) {
-        const targetUrl = nextParam && nextParam.startsWith("/") ? nextParam : "/home";
+        const targetUrl = nextParam && nextParam.startsWith("/") && nextParam !== "/" ? nextParam : "/dashboard";
         window.location.replace(targetUrl);
       } else {
         setErrorMsg(result.error || "Invalid credentials. Please check email and password.");
@@ -132,7 +132,7 @@ export default function LoginForm() {
           setForgotEmail("");
           setForgotNewPass("");
           setForgotConfirmPass("");
-          router.push("/home");
+          router.push("/dashboard");
         }, 1500);
       } else {
         setForgotErrorMsg(res.error || "Failed to set new password.");

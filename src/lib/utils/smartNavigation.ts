@@ -2,6 +2,7 @@
 
 // Main pages in the application (Page-1 destinations)
 export const MAIN_PAGES = [
+  "/dashboard",
   "/home",
   "/invoice",
   "/payments",
@@ -28,12 +29,12 @@ export function trackMainPage(pathname: string) {
 
   // Check if cleanPath matches any main page
   const matched = MAIN_PAGES.find((mp) => {
-    if (mp === "/home") return cleanPath === "/" || cleanPath === "/home";
+    if (mp === "/dashboard" || mp === "/home") return cleanPath === "/" || cleanPath === "/dashboard" || cleanPath === "/home";
     return cleanPath === mp || cleanPath.startsWith(mp + "/");
   });
 
   if (matched) {
-    const target = cleanPath === "/" ? "/home" : cleanPath;
+    const target = cleanPath === "/" ? "/dashboard" : cleanPath;
     sessionStorage.setItem(LAST_MAIN_PAGE_KEY, target);
   }
 }
@@ -99,7 +100,7 @@ export function getSmartBackUrl(
     return "/reports";
   }
 
-  return "/home";
+  return "/dashboard";
 }
 
 /**

@@ -165,7 +165,7 @@ export default function NotificationsView() {
         {/* Top Controls Header */}
         <div className="flex flex sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b gi-divider">
           <div className="flex items-center gap-2.5">
-            <Link href="/home">
+            <Link href="/dashboard">
               <button
                 type="button"
                 className="gi-back-btn"

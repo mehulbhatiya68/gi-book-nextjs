@@ -215,7 +215,7 @@ export default function Topbar({
           </button>
 
           {/* Mobile Brand Logo */}
-          <Link href="/home" className="flex items-center shrink-0 md:hidden py-0.5" title="GI BOOK">
+          <Link href="/dashboard" className="flex items-center shrink-0 md:hidden py-0.5" title="GI BOOK">
             <img
               src="/logo.png"
               alt="GiBook Logo"

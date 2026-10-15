@@ -488,7 +488,7 @@ export default function HomeContent({
                                 key={`pay-${tx.id}`}
                                 onClick={() => {
                                   if (tx.id) {
-                                    router.push(`/paymentDetails/${tx.id}?from=/home`);
+                                    router.push(`/paymentDetails/${tx.id}?from=/dashboard`);
                                   } else {
                                     router.push("/paymentHistory");
                                   }
@@ -549,7 +549,7 @@ export default function HomeContent({
                           key={`pay-mobile-${tx.id}`}
                           onClick={() => {
                             if (tx.id) {
-                              router.push(`/paymentDetails/${tx.id}?from=/home`);
+                              router.push(`/paymentDetails/${tx.id}?from=/dashboard`);
                             } else {
                               router.push("/paymentHistory");
                             }

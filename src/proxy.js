@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 // Private route prefixes that require authentication
 const PROTECTED_PREFIXES = [
+  '/dashboard',
   '/home',
   '/invoice',
   '/invoices',
@@ -61,10 +62,10 @@ export function proxy(request) {
   }
 
   // 2. If user IS authenticated and visiting auth routes (/login or /sign-up):
-  // Redirect to /home.
+  // Redirect to /dashboard.
   if (isAuthenticated && isAuthRoute) {
-    const homeUrl = new URL('/home', request.url);
-    return NextResponse.redirect(homeUrl);
+    const dashboardUrl = new URL('/dashboard', request.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
   return NextResponse.next();

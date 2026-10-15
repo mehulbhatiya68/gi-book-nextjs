@@ -16,7 +16,7 @@ export default function AccessDenied({ moduleName, message }: AccessDeniedProps)
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/home");
+      router.push("/dashboard");
     }
   };
 

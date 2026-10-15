@@ -68,7 +68,7 @@ export default function Sidebar({
   const currentPath = pendingPath || pathname;
 
   const isActive = (path: string) => {
-    if (path === "/home") return currentPath === "/home";
+    if (path === "/dashboard") return currentPath === "/dashboard" || currentPath === "/home";
     if (path === "/items") return currentPath.startsWith("/items") || currentPath.startsWith("/addItem") || currentPath.startsWith("/adjustStock");
     if (path === "/invoice") return currentPath.startsWith("/invoice") || currentPath.startsWith("/addInvoice") || currentPath.startsWith("/invoiceDetails");
     if (path === "/siteProject") return currentPath.startsWith("/siteProject") || currentPath.startsWith("/addSiteProject") || currentPath.startsWith("/projectDetails") || currentPath.startsWith("/siteDetails");
@@ -85,7 +85,7 @@ export default function Sidebar({
       items: [
         {
           name: "Dashboard",
-          href: "/home",
+          href: "/dashboard",
           icon: IoHomeOutline,
           module: "Home",
         },
@@ -292,7 +292,7 @@ function SidebarContent({
           className={`flex items-center justify-between w-full transition-all duration-300 ease-in-out ${collapsed ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
             }`}
         >
-          <Link href="/home" className="flex items-center gap-2 overflow-hidden py-1 shrink-0">
+          <Link href="/dashboard" className="flex items-center gap-2 overflow-hidden py-1 shrink-0">
             <img
               src="/logo.png"
               alt="GiBook Logo"

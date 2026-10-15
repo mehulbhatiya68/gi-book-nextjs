@@ -2,8 +2,27 @@
 @import "@mobiscroll/react-lite/dist/css/mobiscroll.min.css";
 @import "tw-animate-css";
 
-
 @custom-variant dark (&:is(.dark *));
+
+/* Smooth Scrolling & Hidden Scrollbars */
+html {
+  scroll-behavior: smooth !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
 
 /* ==========================================================================
    GI BOOK GLOBAL ERP THEME & DESIGN TOKENS SYSTEM

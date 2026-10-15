@@ -151,7 +151,7 @@ export default function AddBusiness() {
         title: "Business Created",
         message: "Business profile created successfully!"
       });
-      router.replace("/home");
+      router.replace("/dashboard");
     } catch (err: any) {
       if (err?.isEmailUnverified || err?.message?.toLowerCase().includes("verify your email")) {
         setErrorMsg("Please verify your email address to continue creating business profile.");
@@ -181,9 +181,9 @@ export default function AddBusiness() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => router.replace("/home")}
+            onClick={() => router.replace("/dashboard")}
             className="gi-back-btn"
-            title="Back to Home"
+            title="Back to Dashboard"
           >
             <IoChevronBack />
             <span className="gi-back-label">Back</span>
@@ -468,7 +468,7 @@ export default function AddBusiness() {
         <div className="flex items-center justify-end gap-3 pt-4 border-t gi-divider">
           <button
             type="button"
-            onClick={() => router.replace("/home")}
+            onClick={() => router.replace("/dashboard")}
             className="px-5 py-2.5 rounded-xl text-xs font-semibold border gi-surface-interactive gi-text-secondary cursor-pointer"
           >
             Cancel
