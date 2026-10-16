@@ -28,8 +28,10 @@ import PageHeader from "@/components/PageHeader";
 import { SkeletonItemDetails } from "@/components/Skeleton";
 import { itemApi } from "@/lib/api/item";
 import { invoiceApi } from "@/lib/api/invoice";
+import { apiCache } from "@/lib/api/cache";
 import { ItemQrHelper } from "@/lib/utils/itemQrHelper";
-import { ItemBarcodeTagModal } from "@/components/ItemBarcodeQr";
+import dynamic from "next/dynamic";
+const ItemBarcodeTagModal = dynamic(() => import("@/components/ItemBarcodeQr").then((mod) => mod.ItemBarcodeTagModal), { ssr: false });
 
 const normalizeItem = (raw: any) => {
   if (!raw) return null;
@@ -87,8 +89,21 @@ export default function ItemDetails() {
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
 
-  const [item, setItem] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [item, setItem] = useState<any>(() => {
+    const targetId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+    if (!targetId) return null;
+    const cachedDetails = apiCache.peek<any>(`/items/details/${targetId}`, "GET") || apiCache.peek<any>(`/items/${targetId}`, "GET");
+    const rawDetails = cachedDetails?.body?.item || cachedDetails?.body?.data || cachedDetails?.body || cachedDetails?.item || cachedDetails?.data;
+    if (rawDetails && rawDetails.id) return normalizeItem(rawDetails);
+
+    const cachedList = apiCache.peek<any>("/items", "POST", { per_page: "all" }) || apiCache.peek<any>("/items", "POST");
+    const list = Array.isArray(cachedList?.body)
+      ? cachedList.body
+      : (cachedList?.body?.items || cachedList?.body?.data || cachedList?.items || cachedList?.data || []);
+    const found = (Array.isArray(list) ? list : []).find((i: any) => String(i.id) === String(targetId));
+    return found ? normalizeItem(found) : null;
+  });
+  const [loading, setLoading] = useState(() => !item);
   const [errorMsg, setErrorMsg] = useState("");
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -98,7 +113,10 @@ export default function ItemDetails() {
   const fetchItemData = useCallback(async () => {
     const targetId = Array.isArray(params?.id) ? params.id[0] : params?.id;
     if (!targetId) return;
-    setLoading(true);
+
+    if (!item) {
+      setLoading(true);
+    }
     setErrorMsg("");
 
     try {

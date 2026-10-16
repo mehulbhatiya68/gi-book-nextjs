@@ -24,6 +24,7 @@ import { dashboardApi } from "@/lib/api/dashboard";
 import { transactionApi } from "@/lib/api/transaction";
 import { getAuthToken } from "@/lib/api/client";
 
+import { apiCache } from "@/lib/api/cache";
 import { SkeletonTable, SkeletonGraph } from "@/components/Skeleton";
 
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
@@ -44,13 +45,29 @@ export default function HomeContent({
   const router = useRouter();
   const { currentUser, activeBusiness, hasPermission } = useAuth();
 
-  const [payments, setPayments] = useState<any[]>(initialPayments || []);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(
-    !(initialPayments?.length || initialDashboardData),
-    400
-  );
-  const [dashboardApiResponse, setDashboardApiResponse] = useState<any>(initialDashboardData || null);
-  const [isDashboardApiLoading, setIsDashboardApiLoading] = useState(false);
+  const [payments, setPayments] = useState<any[]>(() => {
+    if (initialPayments?.length) return initialPayments;
+    const cached = apiCache.peek<any>("/transactions", "POST", {
+      per_page: "all",
+      sort_by: "transaction_date",
+      sort_dir: "desc",
+    });
+    const txList = cached?.body?.transactions || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : cached?.transactions || cached?.data || []);
+    return Array.isArray(txList) ? txList : [];
+  });
+
+  const [dashboardApiResponse, setDashboardApiResponse] = useState<any>(() => {
+    if (initialDashboardData) return initialDashboardData;
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const compareMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
+    return apiCache.peek<any>(`/dashboard?month=${encodeURIComponent(currentMonth)}&compare_month=${encodeURIComponent(compareMonth)}`, "GET") || null;
+  });
+
+  const hasData = (payments && payments.length > 0) || !!dashboardApiResponse;
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!hasData, 0);
+  const [isDashboardApiLoading, setIsDashboardApiLoading] = useState(!hasData);
 
   const [graphPeriod, setGraphPeriod] = useState("monthly");
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -89,7 +106,7 @@ export default function HomeContent({
   useEffect(() => {
     const token = getAuthToken();
     if (token || activeBusiness?.id) {
-      if (!payments.length && !dashboardApiResponse && !initialPayments?.length && !initialDashboardData) {
+      if (!payments.length && !dashboardApiResponse) {
         startLoading();
         setIsDashboardApiLoading(true);
       }

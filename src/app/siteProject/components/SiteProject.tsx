@@ -22,6 +22,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import { siteProjectApi } from "@/lib/api/siteProject";
+import { apiCache } from "@/lib/api/cache";
 import { SkeletonCard, SkeletonBox } from "@/components/Skeleton";
 import FilterTabs from "@/components/FilterTabs";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
@@ -30,35 +31,43 @@ import SmoothTransition from "@/components/SmoothTransition";
 export default function SiteProject() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
-  const [siteProjects, setSiteProjects] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [siteProjects, setSiteProjects] = useState<any[]>(() => {
+    const cachedP = apiCache.peek<any>("/projects", "POST", { per_page: "all" });
+    const cachedS = apiCache.peek<any>("/sites", "POST", { per_page: "all" });
+    const pList = Array.isArray(cachedP?.body) ? cachedP.body : (cachedP?.body?.projects || cachedP?.body?.data || []);
+    const sList = Array.isArray(cachedS?.body) ? cachedS.body : (cachedS?.body?.sites || cachedS?.body?.data || []);
+    return [...(Array.isArray(pList) ? pList : []), ...(Array.isArray(sList) ? sList : [])];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!siteProjects.length, 0);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: string }>({ key: null, direction: "asc" });
 
-  const loadSiteProjects = async () => {
+  const loadSiteProjects = async (isBackground = false) => {
     if (!activeBusiness?.id) {
       setSiteProjects([]);
       stopLoading();
       return;
     }
-    startLoading();
+    if (!isBackground && !siteProjects.length) {
+      startLoading();
+    }
     try {
       const res: any = await siteProjectApi.getSiteProjects(activeBusiness.id, { silentError: true });
       const list = Array.isArray(res?.body) ? res.body : [];
       setSiteProjects(list);
     } catch (err) {
       console.warn("Failed to fetch site/projects:", err);
-      setSiteProjects([]);
+      if (!isBackground) setSiteProjects([]);
     } finally {
       stopLoading();
     }
   };
 
   useEffect(() => {
-    loadSiteProjects();
+    loadSiteProjects(siteProjects.length > 0);
   }, [activeBusiness?.id]);
 
   const handleSort = (key: string) => {

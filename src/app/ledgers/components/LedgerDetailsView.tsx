@@ -29,6 +29,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
 import PageHeader from "@/components/PageHeader";
 import { SkeletonLedgerDetails } from "@/components/Skeleton";
+import { apiCache } from "@/lib/api/cache";
 import { partyApi } from "@/lib/api/party";
 import { ledgerApi } from "@/lib/api/ledger";
 import { transactionApi } from "@/lib/api/transaction";
@@ -68,10 +69,21 @@ export default function LedgerDetailsView() {
   // Determine correct back destination based on how this view was reached
   const backUrl = pathname?.startsWith("/parties") ? "/parties" : "/ledgers";
 
-  const [ledger, setLedger] = useState<any>(null);
+  const [ledger, setLedger] = useState<any>(() => {
+    const idStr = Array.isArray(ledgerId) ? ledgerId[0] : ledgerId;
+    if (!idStr) return null;
+    const cachedParties = apiCache.peek<any>("/parties", "GET");
+    const pList = Array.isArray(cachedParties?.body) ? cachedParties.body : (cachedParties?.body?.parties || cachedParties?.body?.data || []);
+    const foundP = (Array.isArray(pList) ? pList : []).find((p: any) => String(p.id) === String(idStr));
+    if (foundP) return foundP;
+
+    const cachedLedgers = apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const lList = Array.isArray(cachedLedgers?.body) ? cachedLedgers.body : (cachedLedgers?.body?.ledgers || cachedLedgers?.body?.data || []);
+    return (Array.isArray(lList) ? lList : []).find((l: any) => String(l.id) === String(idStr)) || null;
+  });
   const [invoices, setInvoices] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!ledger);
 
   // Filters & Sorting
   const [activeFilter, setActiveFilter] = useState("invoices");
@@ -94,7 +106,7 @@ export default function LedgerDetailsView() {
     const idStr = Array.isArray(ledgerId) ? ledgerId[0] : ledgerId;
     if (!activeBusiness?.id || !idStr) return;
 
-    setIsLoading(true);
+    if (!ledger) setIsLoading(true);
     try {
       const [ledgerRes, txRes, invoicesRes, paymentsRes]: [any, any, any, any] = await Promise.all([
         ledgerApi.getLedger(idStr).catch(() => null),

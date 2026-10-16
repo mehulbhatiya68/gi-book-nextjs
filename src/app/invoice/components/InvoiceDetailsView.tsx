@@ -23,6 +23,7 @@ import { usePreferences } from "@/lib/hooks/usePreferences";
 import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import { SkeletonInvoiceDetails } from "@/components/Skeleton";
+import { apiCache } from "@/lib/api/cache";
 import { invoiceApi } from "@/lib/api/invoice";
 import { paymentApi } from "@/lib/api/payment";
 import { transactionApi } from "@/lib/api/transaction";
@@ -59,11 +60,20 @@ export default function InvoiceDetailsView() {
 
   const { activeBusiness, currentUser, hasPermission } = useAuth();
 
-  const [invoice, setInvoice] = useState<any>(null);
+  const [invoice, setInvoice] = useState<any>(() => {
+    const idStr = Array.isArray(invoiceId) ? invoiceId[0] : invoiceId;
+    if (!idStr) return null;
+    const cachedList = apiCache.peek<any>("/invoices", "POST");
+    const list = cachedList?.body?.invoices || cachedList?.body || [];
+    if (Array.isArray(list)) {
+      return list.find((i: any) => String(i.id) === String(idStr)) || null;
+    }
+    return null;
+  });
   const [payments, setPayments] = useState<any[]>([]);
   const [partyDetails, setPartyDetails] = useState<any>(null);
   const [allLedgers, setAllLedgers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!invoice);
   const [showTxModal, setShowTxModal] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<any | null>(null);
   const [showDeleteInvoiceModal, setShowDeleteInvoiceModal] = useState(false);
@@ -81,7 +91,7 @@ export default function InvoiceDetailsView() {
   useEffect(() => {
     const idStr = Array.isArray(invoiceId) ? invoiceId[0] : invoiceId;
     if (activeBusiness?.id && idStr) {
-      setIsLoading(true);
+      if (!invoice) setIsLoading(true);
 
       // Fetch primary invoice details first to render UI instantly
       invoiceApi

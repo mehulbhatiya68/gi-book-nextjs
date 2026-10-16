@@ -30,8 +30,10 @@ import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
 import PaginationControls from "@/components/PaginationControls";
 import { SkeletonBox, SkeletonCard } from "@/components/Skeleton";
-import { ItemScannerModal } from "@/components/ItemScannerModal";
+import dynamic from "next/dynamic";
+const ItemScannerModal = dynamic(() => import("@/components/ItemScannerModal").then((mod) => mod.ItemScannerModal), { ssr: false });
 
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -39,12 +41,18 @@ export default function Items() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
 
-  const [items, setItems] = useState([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [items, setItems] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/items", "POST", { per_page: "all" });
+    const list = Array.isArray(cached?.body)
+      ? cached.body
+      : (cached?.body?.items || cached?.body?.data || []);
+    return Array.isArray(list) ? list : [];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!items.length, 0);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" });
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -66,7 +74,7 @@ export default function Items() {
     }
   };
 
-  const handleSort = (key) => {
+  const handleSort = (key: string) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
         if (prev.direction === "asc") return { key, direction: "desc" };
@@ -78,7 +86,9 @@ export default function Items() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      startLoading();
+      if (!items.length) {
+        startLoading();
+      }
       itemApi.getItems({ silentError: true })
         .then((res: any) => {
           const list = Array.isArray(res?.body)

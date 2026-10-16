@@ -30,6 +30,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import { SkeletonBox } from "@/components/Skeleton";
 import { normalizeInvoice, getInvoicePartyId } from "@/lib/utils/invoiceUtils";
 import FilterTabs from "@/components/FilterTabs";
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -41,8 +42,12 @@ export default function InvoicesView() {
   const { currentUser, activeBusiness, hasPermission, openEmailVerificationModal } = useAuth();
   const { t } = usePreferences();
 
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/invoices", "POST");
+    const rawList = cached?.body?.invoices || cached?.body || [];
+    return Array.isArray(rawList) ? rawList : [];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!invoices.length, 0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [emailUnverified, setEmailUnverified] = useState(false);
 
@@ -71,8 +76,11 @@ export default function InvoicesView() {
   const addMenuRef = useRef<HTMLDivElement>(null);
 
   // Fetch Invoices from API
-  const fetchInvoices = async () => {
-    startLoading();
+  const fetchInvoices = async (isBackground: boolean | any = false) => {
+    const isBg = typeof isBackground === "boolean" ? isBackground : false;
+    if (!isBg && !invoices.length) {
+      startLoading();
+    }
     setEmailUnverified(false);
     try {
       const res: any = await invoiceApi.getInvoices({ silentError: true });
@@ -86,7 +94,9 @@ export default function InvoicesView() {
         console.error("Failed to fetch invoices:", error);
         toast.error(error?.message || "Failed to load invoices");
       }
-      setInvoices([]);
+      if (!isBackground) {
+        setInvoices([]);
+      }
     } finally {
       stopLoading();
     }
@@ -94,7 +104,7 @@ export default function InvoicesView() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      fetchInvoices();
+      fetchInvoices(invoices.length > 0);
     } else {
       setInvoices([]);
       stopLoading();
@@ -327,7 +337,7 @@ export default function InvoicesView() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={fetchInvoices}
+              onClick={() => fetchInvoices(false)}
               className="hidden sm:flex p-2 rounded-lg border gi-surface-interactive gi-text-secondary hover:gi-text-primary transition cursor-pointer shrink-0"
               title="Refresh Invoices"
             >

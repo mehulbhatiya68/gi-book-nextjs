@@ -5,6 +5,7 @@ import { authApi } from "@/lib/api/auth";
 import { businessApi } from "@/lib/api/business";
 import Cookies from "js-cookie";
 import { getAuthToken, setAuthToken } from "@/lib/api/client";
+import { apiCache } from "@/lib/api/cache";
 
 import EmailVerificationModal from "@/components/EmailVerificationModal";
 
@@ -49,10 +50,20 @@ const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window !== "undefined") {
+      return Boolean(getAuthToken());
+    }
+    return false;
+  });
   const [businesses, setBusinesses] = useState([]);
   const [activeBusiness, setActiveBusiness] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      return Boolean(getAuthToken());
+    }
+    return false;
+  });
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isEmailVerificationOpen, setIsEmailVerificationOpen] = useState(false);
   const [emailVerificationAddress, setEmailVerificationAddress] = useState("");
@@ -111,7 +122,10 @@ export function AuthProvider({ children }) {
       const activeBiz = normalizeBusiness(rawActive);
 
       setIsLoggedIn(true);
-      if (activeBiz) setActiveBusiness(activeBiz);
+      if (activeBiz) {
+        setActiveBusiness(activeBiz);
+        apiCache.setScope(activeBiz.id, b?.user?.id || b?.profile?.id);
+      }
       if (bizList.length > 0) setBusinesses(bizList);
 
       const userObj = b?.user || b?.profile || b?.user_profile || {};
@@ -181,9 +195,13 @@ export function AuthProvider({ children }) {
         activeBusiness: activeBiz,
       };
 
+      apiCache.clear();
       setCurrentUser(appUser);
       setIsLoggedIn(true);
-      if (activeBiz) setActiveBusiness(activeBiz);
+      if (activeBiz) {
+        setActiveBusiness(activeBiz);
+        apiCache.setScope(activeBiz.id, userObj.id);
+      }
       if (bizList.length > 0) setBusinesses(bizList);
 
       return { success: true, user: appUser };
@@ -247,6 +265,8 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.warn("Logout API call error:", e);
     } finally {
+      apiCache.setScope(null, null);
+      apiCache.clear();
       setCurrentUser(null);
       setIsLoggedIn(false);
       setBusinesses([]);
@@ -269,6 +289,7 @@ export function AuthProvider({ children }) {
         };
 
     const targetBiz = normalizeBusiness(rawTarget);
+    apiCache.setScope(targetBiz?.id, currentUser?.id);
     setActiveBusiness(targetBiz);
 
     if (targetBiz?.id) {

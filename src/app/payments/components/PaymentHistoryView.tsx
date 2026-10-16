@@ -29,17 +29,37 @@ import { siteProjectApi } from "@/lib/api/siteProject";
 import { invoiceApi } from "@/lib/api/invoice";
 import AddLedgerTransactionForm from "@/app/ledgers/components/AddLedgerTransactionForm";
 import { toast } from "react-toastify";
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 
 export default function PaymentHistoryView() {
   const { activeBusiness, hasPermission } = useAuth();
   const router = useRouter();
 
-  const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
-  const [ledgers, setLedgers] = useState<any[]>([]);
-  const [siteProjects, setSiteProjects] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [ledgerTransactions, setLedgerTransactions] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/transactions", "POST", { per_page: "all", sort_by: "transaction_date", sort_dir: "desc" });
+    const txList = Array.isArray(cached?.body)
+      ? cached.body
+      : (cached?.body?.transactions || cached?.body?.data || []);
+    return Array.isArray(txList) ? txList : [];
+  });
+  const [ledgers, setLedgers] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const lList = Array.isArray(cached?.body) ? cached.body : (cached?.body?.ledgers || cached?.body?.data || []);
+    return Array.isArray(lList) ? lList : [];
+  });
+  const [siteProjects, setSiteProjects] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/projects", "POST", { per_page: "all" }) || apiCache.peek<any>("/sites", "POST", { per_page: "all" });
+    const sList = Array.isArray(cached?.body) ? cached.body : (cached?.body?.projects || cached?.body?.data || []);
+    return Array.isArray(sList) ? sList : [];
+  });
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/invoices", "POST", { per_page: "all" }) || apiCache.peek<any>("/invoices", "POST");
+    const iList = Array.isArray(cached?.body) ? cached.body : (cached?.body?.invoices || cached?.body?.data || []);
+    return Array.isArray(iList) ? iList : [];
+  });
+  const hasCached = ledgerTransactions.length > 0 || ledgers.length > 0;
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!hasCached, 0);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +99,7 @@ export default function PaymentHistoryView() {
     return map;
   }, [invoices]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isBackground = false) => {
     if (!activeBusiness?.id) {
       setLedgerTransactions([]);
       setLedgers([]);
@@ -88,7 +108,9 @@ export default function PaymentHistoryView() {
       return;
     }
 
-    startLoading();
+    if (!isBackground && !hasCached) {
+      startLoading();
+    }
     try {
       const [ledgersRes, siteProjectsRes, invoicesRes]: [any, any, any] = await Promise.all([
         ledgerApi.getLedgers({ per_page: "all", silentError: true }).catch(() => ({ body: [] })),
@@ -150,15 +172,15 @@ export default function PaymentHistoryView() {
       setLedgerTransactions(Array.isArray(txList) ? txList : []);
     } catch (err) {
       console.warn("Error fetching transactions data:", err);
-      setLedgerTransactions([]);
+      if (!isBackground) setLedgerTransactions([]);
     } finally {
       stopLoading();
     }
-  }, [activeBusiness?.id, startLoading, stopLoading]);
+  }, [activeBusiness?.id, startLoading, stopLoading, hasCached]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(hasCached);
+  }, [fetchData, hasCached]);
 
   const handleDeleteTransaction = async () => {
     if (!txToDelete?.id) return;

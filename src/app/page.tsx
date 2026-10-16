@@ -3,21 +3,21 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthToken } from "@/lib/api/client";
 import LandingPage from "@/components/LandingPage";
 
 export default function RootPage() {
   const router = useRouter();
   const { isLoggedIn, isLoading } = useAuth();
+  const hasToken = typeof window !== "undefined" && Boolean(getAuthToken());
 
   useEffect(() => {
-    if (isLoading) return;
-
-    if (isLoggedIn) {
+    if (isLoggedIn || hasToken) {
       router.replace("/dashboard");
     }
-  }, [isLoggedIn, isLoading, router]);
+  }, [isLoggedIn, hasToken, router]);
 
-  if (isLoggedIn) {
+  if (isLoggedIn || hasToken) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0D1117]">
         <div className="p-6 rounded-2xl bg-white dark:bg-[#161B22] border border-slate-200 dark:border-zinc-800 shadow-md flex items-center gap-3">
@@ -28,6 +28,10 @@ export default function RootPage() {
         </div>
       </div>
     );
+  }
+
+  if (isLoading) {
+    return null;
   }
 
   return <LandingPage />;

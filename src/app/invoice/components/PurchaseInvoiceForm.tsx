@@ -19,7 +19,8 @@ import {
   IoBarcodeOutline,
   IoScanOutline,
 } from "react-icons/io5";
-import { ItemScannerModal } from "@/components/ItemScannerModal";
+import dynamic from "next/dynamic";
+const ItemScannerModal = dynamic(() => import("@/components/ItemScannerModal").then((mod) => mod.ItemScannerModal), { ssr: false });
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
 import { usePreferences } from "@/lib/hooks/usePreferences";
@@ -28,6 +29,7 @@ import { itemApi } from "@/lib/api/item";
 import { invoiceApi } from "@/lib/api/invoice";
 import { ledgerApi } from "@/lib/api/ledger";
 import { settingsApi } from "@/lib/api/settings";
+import { apiCache } from "@/lib/api/cache";
 import MobiscrollDatePicker from "@/components/MobiscrollDatePicker";
 import QuantityStepper from "@/components/QuantityStepper";
 import CustomSelect from "@/components/CustomSelect";
@@ -49,6 +51,22 @@ export default function PurchaseInvoiceForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
+  const [parties, setParties] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/parties", "GET");
+    const list = Array.isArray(cached?.body) ? cached.body : (cached?.body?.data || cached?.body?.parties || cached?.body?.ledgers || []);
+    return Array.isArray(list) ? list : [];
+  });
+  const [items, setItems] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/items", "POST", { per_page: "all" }) || apiCache.peek<any>("/items", "POST");
+    const list = Array.isArray(cached?.body) ? cached.body : (cached?.body?.data || cached?.body?.items || []);
+    return Array.isArray(list) ? list : [];
+  });
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/invoices", "POST") || apiCache.peek<any>("/invoices", "GET");
+    const list = Array.isArray(cached?.body) ? cached.body : (cached?.body?.data || cached?.body?.invoices || []);
+    return Array.isArray(list) ? list : [];
+  });
+
   useEffect(() => {
     if (activeBusiness?.id) {
       Promise.all([
@@ -66,10 +84,6 @@ export default function PurchaseInvoiceForm() {
       setInvoices([]);
     }
   }, [activeBusiness?.id]);
-
-  const [parties, setParties] = useState([]);
-  const [items, setItems] = useState([]);
-  const [invoices, setInvoices] = useState([]);
 
   const [selectedParty, setSelectedParty] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);

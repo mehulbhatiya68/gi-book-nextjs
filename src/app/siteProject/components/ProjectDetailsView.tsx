@@ -24,6 +24,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import { SkeletonProjectDetails } from "@/components/Skeleton";
 import { siteProjectApi } from "@/lib/api/siteProject";
+import { apiCache } from "@/lib/api/cache";
 
 export default function ProjectDetailsView() {
   const params = useParams();
@@ -33,15 +34,26 @@ export default function ProjectDetailsView() {
   const projectId = params?.id as string;
   const { hasPermission } = useAuth();
 
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<any>(() => {
+    if (!projectId) return null;
+    const cachedDetail = apiCache.peek<any>(`/projects/${projectId}`, "GET") || apiCache.peek<any>(`/projects/details/${projectId}`, "GET");
+    const pObj = cachedDetail?.body?.project || cachedDetail?.body?.data || cachedDetail?.body;
+    if (pObj) return pObj;
+    const cachedList = apiCache.peek<any>("/projects", "POST", { per_page: "all" }) || apiCache.peek<any>("/projects", "POST");
+    const list = cachedList?.body?.projects || cachedList?.body?.data || (Array.isArray(cachedList?.body) ? cachedList.body : []);
+    const found = (Array.isArray(list) ? list : []).find((p: any) => String(p.id) === String(projectId));
+    return found || null;
+  });
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !project);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchProjectDetails = async () => {
     if (!projectId) return;
-    setIsLoading(true);
+    if (!project) {
+      setIsLoading(true);
+    }
     try {
       const [projRes, txRes]: [any, any] = await Promise.all([
         siteProjectApi.getProjectDetails(projectId, { silentError: true }),

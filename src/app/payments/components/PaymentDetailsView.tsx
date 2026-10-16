@@ -27,6 +27,7 @@ import { transactionApi } from "@/lib/api/transaction";
 import { partyApi } from "@/lib/api/party";
 import { invoiceApi } from "@/lib/api/invoice";
 import { getPaymentModeDisplay } from "@/lib/utils/transactionDisplayUtils";
+import { apiCache } from "@/lib/api/cache";
 
 export interface PaymentDetailsViewProps {
   initialPaymentId?: string;
@@ -52,12 +53,42 @@ export default function PaymentDetailsView({
 
   const { activeBusiness, hasPermission } = useAuth();
 
-  const [payments, setPayments] = useState<any[]>(initialPayment ? [initialPayment] : []);
-  const [parties, setParties] = useState<any[]>(initialParties);
-  const [invoices, setInvoices] = useState<any[]>(initialInvoices);
-  const [ledgers, setLedgers] = useState<any[]>(initialLedgers);
-  const [singlePayment, setSinglePayment] = useState<any>(initialPayment);
-  const [isLoading, setIsLoading] = useState(!initialPayment);
+  const [singlePayment, setSinglePayment] = useState<any>(() => {
+    if (initialPayment) return initialPayment;
+    if (!paymentId) return null;
+    const cachedDetail = apiCache.peek<any>(`/payments/${paymentId}`, "GET") || apiCache.peek<any>(`/transactions/${paymentId}`, "GET");
+    const pObj = cachedDetail?.body?.payment || cachedDetail?.body?.transaction || cachedDetail?.body?.data || cachedDetail?.body;
+    if (pObj) return pObj;
+    const cachedList = apiCache.peek<any>("/transactions", "POST") || apiCache.peek<any>("/payments", "POST");
+    const list = cachedList?.body?.transactions || cachedList?.body?.payments || cachedList?.body?.data || (Array.isArray(cachedList?.body) ? cachedList.body : []);
+    const found = (Array.isArray(list) ? list : []).find((p: any) => String(p.id) === String(paymentId));
+    return found || null;
+  });
+
+  const [payments, setPayments] = useState<any[]>(() => {
+    if (initialPayment) return [initialPayment];
+    if (singlePayment) return [singlePayment];
+    return [];
+  });
+  const [parties, setParties] = useState<any[]>(() => {
+    if (initialParties && initialParties.length > 0) return initialParties;
+    const cached = apiCache.peek<any>("/parties", "GET");
+    const list = cached?.body?.parties || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(list) ? list : [];
+  });
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    if (initialInvoices && initialInvoices.length > 0) return initialInvoices;
+    const cached = apiCache.peek<any>("/invoices", "POST");
+    const list = cached?.body?.invoices || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(list) ? list : [];
+  });
+  const [ledgers, setLedgers] = useState<any[]>(() => {
+    if (initialLedgers && initialLedgers.length > 0) return initialLedgers;
+    const cached = apiCache.peek<any>("/ledgers", "POST");
+    const list = cached?.body?.ledgers || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(list) ? list : [];
+  });
+  const [isLoading, setIsLoading] = useState(() => !singlePayment);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   const ledgersMap = useMemo(() => {

@@ -22,6 +22,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { SkeletonBox, SkeletonCard } from "@/components/Skeleton";
 import FilterTabs from "@/components/FilterTabs";
 import CustomSelect from "@/components/CustomSelect";
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -29,14 +30,20 @@ export default function Parties() {
   const router = useRouter();
   const { activeBusiness, hasPermission } = useAuth();
 
-  const [parties, setParties] = useState([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [parties, setParties] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/parties", "GET") || apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const list = Array.isArray(cached?.body)
+      ? cached.body
+      : (cached?.body?.data || cached?.body?.parties || cached?.body?.ledgers || []);
+    return Array.isArray(list) ? list : [];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!parties.length, 0);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: "asc" | "desc" }>({ key: null, direction: "asc" });
 
-  const handleSort = (key) => {
+  const handleSort = (key: string) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
         if (prev.direction === "asc") return { key, direction: "desc" };
@@ -48,7 +55,9 @@ export default function Parties() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      startLoading();
+      if (!parties.length) {
+        startLoading();
+      }
       partyApi.getParties(activeBusiness.id)
         .then((res: any) => {
           const list = Array.isArray(res?.body)

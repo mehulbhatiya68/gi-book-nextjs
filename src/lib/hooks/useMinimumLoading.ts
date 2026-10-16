@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const DEFAULT_MIN_TIME = 400; // 400ms minimum skeleton duration to prevent UI jitter
+const DEFAULT_MIN_TIME = 0; // Default to instant transition (no artificial delay)
 
 export function useMinimumLoading(initialState = true, minTime = DEFAULT_MIN_TIME) {
   const [isLoading, setIsLoading] = useState(initialState);
@@ -20,6 +20,16 @@ export function useMinimumLoading(initialState = true, minTime = DEFAULT_MIN_TIM
 
   const stopLoading = useCallback(
     (onComplete?: () => void) => {
+      if (minTime <= 0) {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        setIsLoading(false);
+        if (onComplete) onComplete();
+        return;
+      }
+
       const now = typeof window !== "undefined" ? performance.now() : Date.now();
       const elapsed = now - startTimeRef.current;
       const remainingDelay = Math.max(0, minTime - elapsed);

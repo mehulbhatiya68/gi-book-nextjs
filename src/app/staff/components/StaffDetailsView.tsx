@@ -21,6 +21,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import PageHeader from "@/components/PageHeader";
 import { SkeletonStaffDetails } from "@/components/Skeleton";
 import { staffApi } from "@/lib/api/staff";
+import { apiCache } from "@/lib/api/cache";
 
 function formatPhone(staff: any): string {
   const num = staff?.mobile_number || staff?.mobile;
@@ -70,14 +71,25 @@ export default function StaffDetailsView() {
   const staffId = params?.id as string;
   const { hasPermission } = useAuth();
 
-  const [staff, setStaff] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [staff, setStaff] = useState<any>(() => {
+    if (!staffId) return null;
+    const cachedDetail = apiCache.peek<any>(`/staff/${staffId}`, "GET") || apiCache.peek<any>(`/staff/details/${staffId}`, "GET");
+    const sObj = cachedDetail?.body?.staff || cachedDetail?.body?.data || cachedDetail?.body;
+    if (sObj) return sObj;
+    const cachedList = apiCache.peek<any>("/staff", "POST", { per_page: "all" }) || apiCache.peek<any>("/staff", "POST");
+    const list = cachedList?.body?.staff || cachedList?.body?.data || (Array.isArray(cachedList?.body) ? cachedList.body : []);
+    const found = (Array.isArray(list) ? list : []).find((s: any) => String(s.id) === String(staffId));
+    return found || null;
+  });
+  const [isLoading, setIsLoading] = useState(() => !staff);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchStaffDetails = async () => {
     if (!staffId) return;
-    setIsLoading(true);
+    if (!staff) {
+      setIsLoading(true);
+    }
     try {
       const res: any = await staffApi.getStaffDetail(staffId);
       const sObj = res?.body?.staff || res?.body?.data || res?.body;

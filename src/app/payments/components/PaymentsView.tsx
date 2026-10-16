@@ -20,6 +20,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import FilterTabs from "@/components/FilterTabs";
 import { SkeletonBox, SkeletonCard, SkeletonStats } from "@/components/Skeleton";
 import { toast } from "react-toastify";
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -29,10 +30,23 @@ export default function PaymentsView() {
   const rawFilter = searchParams ? (searchParams.get("filter") || searchParams.get("tab")) : null;
   const { activeBusiness, hasPermission } = useAuth();
 
-  const [ledgers, setLedgers] = useState<any[]>([]);
-  const [parties, setParties] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [ledgers, setLedgers] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const raw = cached?.body?.ledgers || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(raw) ? raw : [];
+  });
+  const [parties, setParties] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/parties", "GET") || apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const raw = cached?.body?.parties || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(raw) ? raw : [];
+  });
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/invoices", "POST");
+    const raw = cached?.body?.invoices || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(raw) ? raw : [];
+  });
+  const hasCached = ledgers.length > 0 || parties.length > 0 || invoices.length > 0;
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!hasCached, 0);
 
   const [activeFilter, setActiveFilter] = useState(() => {
     if (rawFilter && ["all", "to_collect", "to_pay"].includes(rawFilter)) {
@@ -53,9 +67,11 @@ export default function PaymentsView() {
   const [ledgerToDelete, setLedgerToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchPaymentsData = useCallback(() => {
+  const fetchPaymentsData = useCallback((isBackground = false) => {
     if (activeBusiness?.id) {
-      startLoading();
+      if (!isBackground && !ledgers.length && !parties.length && !invoices.length) {
+        startLoading();
+      }
       Promise.all([
         ledgerApi.getLedgers({ per_page: "all", silentError: true }).catch(() => ({ body: [] })),
         partyApi.getParties(activeBusiness.id).catch(() => ({ body: [] })),
@@ -80,10 +96,10 @@ export default function PaymentsView() {
       setInvoices([]);
       stopLoading();
     }
-  }, [activeBusiness?.id, startLoading, stopLoading]);
+  }, [activeBusiness?.id, startLoading, stopLoading, ledgers.length, parties.length, invoices.length]);
 
   useEffect(() => {
-    fetchPaymentsData();
+    fetchPaymentsData(ledgers.length > 0 || parties.length > 0 || invoices.length > 0);
   }, [fetchPaymentsData]);
 
   const handleDeleteLedger = async () => {

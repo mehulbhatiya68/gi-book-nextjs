@@ -17,14 +17,14 @@ import {
   IoClose,
   IoSparklesOutline,
 } from "react-icons/io5";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import PermissionGuard from "@/components/PermissionGuard";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import PageHeader from "@/components/PageHeader";
 import { itemApi } from "@/lib/api/item";
 import { ItemBarcode } from "@/components/ItemBarcodeQr";
-import { ItemScannerModal } from "@/components/ItemScannerModal";
+const ItemScannerModal = dynamic(() => import("@/components/ItemScannerModal").then((mod) => mod.ItemScannerModal), { ssr: false });
 import { toast } from "react-toastify";
 import LimitReachedView from "@/components/LimitReachedView";
 import { useLimitCheck } from "@/lib/hooks/useLimitCheck";
@@ -222,6 +222,7 @@ export default function AddItem() {
 
     setIsFetchingByCode(true);
     try {
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
       const html5QrCode = new Html5Qrcode("desktop-file-reader", {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.CODE_128,

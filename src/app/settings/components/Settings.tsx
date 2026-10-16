@@ -73,6 +73,7 @@ import { ledgerApi } from "@/lib/api/ledger";
 import { siteProjectApi } from "@/lib/api/siteProject";
 import { staffApi } from "@/lib/api/staff";
 import { transactionApi } from "@/lib/api/transaction";
+import { apiCache } from "@/lib/api/cache";
 
 export default function Settings() {
   const router = useRouter();
@@ -103,33 +104,55 @@ export default function Settings() {
   }, [tabParam]);
   const [bizViewMode, setBizViewMode] = useState("view"); // 'view' | 'edit'
 
-  // Full Business Details State (from businessApi.getBusiness)
-  const [fullBusinessData, setFullBusinessData] = useState<any>(null);
+  // Full Business Details State (from businessApi.getBusiness or context)
+  const [fullBusinessData, setFullBusinessData] = useState<any>(() => {
+    if (activeBusiness?.id) {
+      const cached = apiCache.peek<any>(`/business/${activeBusiness.id}`, "GET");
+      if (cached) return cached?.body?.business || cached?.body?.data || cached?.body || cached?.data || cached;
+    }
+    return activeBusiness || null;
+  });
   const [isLoadingBiz, setIsLoadingBiz] = useState(false);
 
   // Business Edit form state (Strictly matching business.md schema)
+  const initialBiz = fullBusinessData || activeBusiness;
   const [bizForm, setBizForm] = useState({
-    name: "",
-    type: "Agency",
-    logo: "",
-    email: "",
-    phone: "",
-    address: "",
-    gstNumber: "",
-    panNumber: "",
-    cin: "",
-    tin: "",
+    name: initialBiz?.business_name || initialBiz?.name || "",
+    type: initialBiz?.business_type || initialBiz?.type || "Agency",
+    logo: initialBiz?.business_logo || initialBiz?.logo || "",
+    email: initialBiz?.contact_email || initialBiz?.email || "",
+    phone: initialBiz?.contact_phone || initialBiz?.phone || "",
+    address: initialBiz?.address || initialBiz?.address_line1 || "",
+    gstNumber: initialBiz?.gst_number || initialBiz?.gstin || initialBiz?.gstNumber || "",
+    panNumber: initialBiz?.pan_number || initialBiz?.pan || initialBiz?.panNumber || "",
+    cin: initialBiz?.cin || "",
+    tin: initialBiz?.tin || "",
   });
 
   // Business Settings State (from settingsApi.getSettings)
-  const [businessSettings, setBusinessSettings] = useState({
-    currency: "INR",
-    timezone: "Asia/Kolkata",
-    language: "en",
-    thermal_printer_size: "3_inch",
-    invoice_prefix: "INV",
-    invoice_theme_color: "#1B1B18",
-    show_gst_column: true,
+  const [businessSettings, setBusinessSettings] = useState(() => {
+    const cached = apiCache.peek<any>("settings", "GET");
+    const data = cached?.body?.settings || cached?.settings || cached?.body || cached;
+    if (data && typeof data === "object") {
+      return {
+        currency: data.currency || "INR",
+        timezone: data.timezone || "Asia/Kolkata",
+        language: data.language || "en",
+        thermal_printer_size: data.thermal_printer_size || "3_inch",
+        invoice_prefix: data.invoice_prefix || "INV",
+        invoice_theme_color: data.invoice_theme_color || "#1B1B18",
+        show_gst_column: data.show_gst_column ?? true,
+      };
+    }
+    return {
+      currency: "INR",
+      timezone: "Asia/Kolkata",
+      language: "en",
+      thermal_printer_size: "3_inch",
+      invoice_prefix: "INV",
+      invoice_theme_color: "#1B1B18",
+      show_gst_column: true,
+    };
   });
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -154,15 +177,23 @@ export default function Settings() {
   const [isSubmittingPass, setIsSubmittingPass] = useState(false);
 
   // User Profile & Account Data State (from authApi.getProfile & businessApi.getBusinesses)
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(() => {
+    const cached = apiCache.peek<any>("/user/profile", "GET");
+    const uData = cached?.body?.user || cached?.user || cached?.body?.data || cached?.data || cached?.body || cached;
+    return uData || currentUser || null;
+  });
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [accountBusinesses, setAccountBusinesses] = useState<any[]>([]);
+  const [accountBusinesses, setAccountBusinesses] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/businesses", "GET");
+    const bList = cached?.body?.businesses || cached?.businesses || cached?.body?.data || cached?.data || (Array.isArray(cached?.body) ? cached.body : Array.isArray(cached) ? cached : null);
+    return Array.isArray(bList) ? bList : (businesses || []);
+  });
   const [isLoadingAccountBiz, setIsLoadingAccountBiz] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    name: "",
-    mobile_number: "",
-    country_code: "91",
+    name: currentUser?.name || "",
+    mobile_number: currentUser?.mobile_number || currentUser?.mobile || currentUser?.phone || "",
+    country_code: currentUser?.country_code ? String(currentUser.country_code) : "91",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState("");
@@ -173,8 +204,16 @@ export default function Settings() {
   const [showDeleteBizConfirm, setShowDeleteBizConfirm] = useState(false);
 
   // Subscription State (from subscriptionApi)
-  const [subPlans, setSubPlans] = useState<any[]>([]);
-  const [subUsage, setSubUsage] = useState<any[]>([]);
+  const [subPlans, setSubPlans] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/subscription/plans", "GET");
+    const list = cached?.body?.plans || cached?.plans || (Array.isArray(cached?.body) ? cached.body : Array.isArray(cached) ? cached : null);
+    return Array.isArray(list) ? list : [];
+  });
+  const [subUsage, setSubUsage] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/subscription/usage", "GET");
+    const list = cached?.body?.usages || cached?.usages || (Array.isArray(cached?.body) ? cached.body : Array.isArray(cached) ? cached : null);
+    return Array.isArray(list) ? list : [];
+  });
   const [liveUsageCounts, setLiveUsageCounts] = useState<Record<string, number>>({});
   const [activeSub, setActiveSub] = useState<any>(null);
   const [subHistory, setSubHistory] = useState<any[]>([]);
@@ -184,7 +223,10 @@ export default function Settings() {
   const [subTabScreen, setSubTabScreen] = useState<'main' | 'details' | 'history'>('main');
 
   // App Info State (from appInfoApi)
-  const [appInfoData, setAppInfoData] = useState<any>(null);
+  const [appInfoData, setAppInfoData] = useState<any>(() => {
+    const cached = apiCache.peek<any>("/app-info", "GET");
+    return cached?.body || cached || null;
+  });
   const [isLoadingAppInfo, setIsLoadingAppInfo] = useState(false);
   const [appInfoError, setAppInfoError] = useState<string | null>(null);
   const [selectedPageModal, setSelectedPageModal] = useState<{
@@ -196,7 +238,9 @@ export default function Settings() {
   const [isLoadingPageDetail, setIsLoadingPageDetail] = useState(false);
 
   const fetchAppInfo = async () => {
-    setIsLoadingAppInfo(true);
+    if (!appInfoData) {
+      setIsLoadingAppInfo(true);
+    }
     setAppInfoError(null);
     try {
       const res = await appInfoApi.getAppInfo({ silentError: true });
@@ -401,7 +445,9 @@ export default function Settings() {
   // 1. Fetch Full Business Details from API
   const fetchFullBusinessData = async (bizId: string) => {
     if (!bizId) return;
-    setIsLoadingBiz(true);
+    if (!fullBusinessData && !activeBusiness) {
+      setIsLoadingBiz(true);
+    }
     try {
       const res = await businessApi.getBusiness(bizId, { silentError: true });
       const biz = res?.body?.business || res?.body?.data || res?.body || res?.data || res;
@@ -450,7 +496,9 @@ export default function Settings() {
 
   // 2. Fetch Business Settings
   const fetchSettings = async () => {
-    setIsLoadingSettings(true);
+    if (!businessSettings?.currency) {
+      setIsLoadingSettings(true);
+    }
     try {
       const res = await settingsApi.getSettings();
       const data = res?.body?.settings || res?.settings || res?.body || res;
@@ -489,7 +537,9 @@ export default function Settings() {
 
   // Fetch User Profile from API
   const fetchUserProfile = async () => {
-    setIsLoadingProfile(true);
+    if (!userProfile && !currentUser) {
+      setIsLoadingProfile(true);
+    }
     try {
       const res = await authApi.getProfile();
       const uData = res?.body?.user || res?.user || res?.body?.data || res?.data || res?.body || res;
@@ -515,7 +565,9 @@ export default function Settings() {
 
   // Fetch Owner Businesses from API
   const fetchAccountBusinesses = async () => {
-    setIsLoadingAccountBiz(true);
+    if (!accountBusinesses?.length && !businesses?.length) {
+      setIsLoadingAccountBiz(true);
+    }
     try {
       const res = await businessApi.getBusinesses();
       const bList = res?.body?.businesses || res?.businesses || res?.body?.data || res?.data || (Array.isArray(res?.body) ? res.body : Array.isArray(res) ? res : []);
@@ -560,7 +612,9 @@ export default function Settings() {
 
   // Fetch Subscription Plans, Usage, and User Subscriptions from API
   const fetchSubscriptionData = async () => {
-    setIsLoadingSub(true);
+    if (!subPlans?.length) {
+      setIsLoadingSub(true);
+    }
     try {
       const [
         plansRes,

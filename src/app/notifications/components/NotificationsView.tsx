@@ -26,6 +26,7 @@ import FilterTabs from "@/components/FilterTabs";
 import { toast } from "react-toastify";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
+import { apiCache } from "@/lib/api/cache";
 
 export default function NotificationsView() {
   const router = useRouter();
@@ -33,8 +34,12 @@ export default function NotificationsView() {
   const { t } = usePreferences();
 
   const [activeTab, setActiveTab] = useState<"notifications" | "preferences">("notifications");
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [notifications, setNotifications] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/notifications", "GET");
+    const list = cached?.body?.notifications || cached?.body?.data || cached?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(list) ? list : [];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!notifications.length, 0);
 
   // Preferences state
   const [preferences, setPreferences] = useState<Record<string, { is_enabled: boolean; config?: any }>>({
@@ -49,8 +54,10 @@ export default function NotificationsView() {
   });
   const [isSavingPref, setIsSavingPref] = useState(false);
 
-  const fetchNotifications = async () => {
-    startLoading();
+  const fetchNotifications = async (isBackground = false) => {
+    if (!isBackground && !notifications.length) {
+      startLoading();
+    }
     try {
       const res: any = await notificationApi.getNotifications({ page: 1, per_page: 50, silentError: true });
       const list = res?.body?.notifications || res?.body?.data || res?.data || (Array.isArray(res?.body) ? res.body : []);
@@ -89,7 +96,7 @@ export default function NotificationsView() {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(notifications.length > 0);
     fetchPreferences();
   }, [activeBusiness?.id]);
 

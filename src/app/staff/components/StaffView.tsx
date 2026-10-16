@@ -61,6 +61,7 @@ function getPermissionsSummary(staffPermissions: any): Array<{ module: string; a
   });
 }
 
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -68,13 +69,20 @@ export default function StaffView() {
   const { activeBusiness } = useAuth();
   const router = useRouter();
   const { hasPermission } = useAuth();
-  const [staffList, setStaffList] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [staffList, setStaffList] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/staff", "POST", { per_page: "all" });
+    const list = cached?.body?.staff || cached?.body?.data || (Array.isArray(cached?.body) ? cached.body : []);
+    return Array.isArray(list) ? list : [];
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!staffList.length, 0);
   const [selectedStaffDetail, setSelectedStaffDetail] = useState<any>(null);
   const [showDeleteStaffModal, setShowDeleteStaffModal] = useState(false);
 
-  const loadStaff = () => {
-    startLoading();
+  const loadStaff = (isBackground: boolean | any = false) => {
+    const isBg = typeof isBackground === "boolean" ? isBackground : false;
+    if (!isBg && !staffList.length) {
+      startLoading();
+    }
     staffApi
       .getStaff({ per_page: "all" })
       .then((res: any) => {
@@ -83,13 +91,13 @@ export default function StaffView() {
       })
       .catch((err) => {
         console.error("Failed to load staff members:", err);
-        setStaffList([]);
+        if (!isBackground) setStaffList([]);
       })
       .finally(() => stopLoading());
   };
 
   useEffect(() => {
-    loadStaff();
+    loadStaff(staffList.length > 0);
   }, [activeBusiness?.id]);
 
   const confirmDeleteStaff = async () => {

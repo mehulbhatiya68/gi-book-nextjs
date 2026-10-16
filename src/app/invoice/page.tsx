@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import InvoicesView from "@/app/invoice/components/InvoicesView";
+import { SkeletonTable } from "@/components/Skeleton";
 
 export default function InvoicePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen p-6 flex items-center justify-center gi-text-muted text-xs font-semibold">
-          Loading Invoices...
+        <div className="space-y-4 p-4 sm:p-6 max-w-7xl mx-auto">
+          <SkeletonTable rows={8} cols={6} />
         </div>
       }
     >

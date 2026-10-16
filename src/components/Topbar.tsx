@@ -31,8 +31,8 @@ import SearchBar from "@/components/SearchBar";
 
 export default function Topbar({
   onOpenMobileSidebar,
-  sidebarWidth = 256,
-  isDesktop = false,
+  sidebarWidth = 210,
+  isDesktop = true,
   isCollapsed = false,
   onToggleCollapse = () => { },
 }: {
@@ -54,6 +54,7 @@ export default function Topbar({
     hasPermission,
   } = useAuth();
 
+  const [isMounted, setIsMounted] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -62,6 +63,10 @@ export default function Topbar({
   const [topbarProfile, setTopbarProfile] = useState<any>(null);
   const [topbarNotifs, setTopbarNotifs] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchTopbarNotifs = async () => {
     try {
@@ -197,7 +202,7 @@ export default function Topbar({
   return (
     <>
       <header
-        className="fixed top-0 right-0 z-40 h-14 gi-topbar flex items-center justify-between px-3 sm:px-5 select-none gap-3 transition-[left] duration-300 ease-in-out"
+        className={`fixed top-0 right-0 z-40 h-14 gi-topbar flex items-center justify-between px-3 sm:px-5 select-none gap-3 ${isMounted ? "transition-[left] duration-300 ease-in-out" : ""}`}
         style={{ left: isDesktop ? `${sidebarWidth}px` : 0 }}
         suppressHydrationWarning
       >

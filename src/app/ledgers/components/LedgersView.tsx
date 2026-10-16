@@ -26,6 +26,7 @@ import { partyApi } from "@/lib/api/party";
 import PermissionGuard from "@/components/PermissionGuard";
 import { SkeletonCard, SkeletonBox } from "@/components/Skeleton";
 import { toast } from "react-toastify";
+import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
@@ -34,8 +35,17 @@ export default function LedgersView() {
   const { activeBusiness, hasPermission } = useAuth();
   const { t } = usePreferences();
 
-  const [ledgers, setLedgers] = useState<any[]>([]);
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(true, 400);
+  const [ledgers, setLedgers] = useState<any[]>(() => {
+    const cached = apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
+    const list = Array.isArray(cached?.body)
+      ? cached.body
+      : (cached?.body?.ledgers || cached?.body?.data || (Array.isArray(cached) ? cached : []));
+    return (Array.isArray(list) ? list : []).filter((l: any) => {
+      const t = String(l.type || "").toLowerCase();
+      return !["customer", "supplier", "client", "vendor"].includes(t);
+    });
+  });
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!ledgers.length, 0);
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,9 +55,11 @@ export default function LedgersView() {
   const [ledgerToDelete, setLedgerToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchLedgers = () => {
+  const fetchLedgers = (isBackground = false) => {
     if (activeBusiness?.id) {
-      startLoading();
+      if (!isBackground && !ledgers.length) {
+        startLoading();
+      }
       ledgerApi.getLedgers({ per_page: "all", silentError: true })
         .then((res: any) => {
           const list = Array.isArray(res?.body)
@@ -61,7 +73,9 @@ export default function LedgersView() {
 
           setLedgers(nonPartyLedgers);
         })
-        .catch(() => setLedgers([]))
+        .catch(() => {
+          if (!isBackground) setLedgers([]);
+        })
         .finally(() => stopLoading());
     } else {
       setLedgers([]);
@@ -70,7 +84,7 @@ export default function LedgersView() {
   };
 
   useEffect(() => {
-    fetchLedgers();
+    fetchLedgers(ledgers.length > 0);
   }, [activeBusiness?.id]);
 
   const handleDeleteLedger = async () => {

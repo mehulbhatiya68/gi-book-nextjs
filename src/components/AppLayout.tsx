@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
 
 import LogoutConfirmModal from "@/components/LogoutConfirmModal";
 import Topbar from "./Topbar";
@@ -19,23 +18,26 @@ export default function AppLayout({ children }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(210);
 
-  const [isDesktop, setIsDesktop] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("gi_book_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("gi_book_sidebar_collapsed");
-      if (saved === "true") {
-        setIsCollapsed(true);
-      }
-    }
 
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 768);
     };
-    handleResize();
     window.addEventListener("resize", handleResize);
 
     return () => window.removeEventListener("resize", handleResize);
@@ -51,11 +53,10 @@ export default function AppLayout({ children }) {
 
   const effectiveSidebarWidth = isCollapsed ? 64 : 210;
 
-  // Automatically close mobile sidebar drawer and scroll to top on route change
+  // Automatically close mobile sidebar drawer on route change
   useEffect(() => {
     setMobileDrawerOpen(false);
     if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       trackMainPage(pathname);
     }
   }, [pathname]);
@@ -103,19 +104,13 @@ export default function AppLayout({ children }) {
         />
       </div>
       <main
-        className="flex-1 pt-14 pb-safe w-full max-w-full overflow-x-hidden transition-[padding-left] duration-300 ease-in-out print:p-0 print:m-0 print:pt-0 print:w-full print:block flex flex-col min-h-0"
+        className={`flex-1 pt-14 pb-safe w-full max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:w-full print:block flex flex-col min-h-0 ${isMounted ? "transition-[padding-left] duration-300 ease-in-out" : ""}`}
         style={{ paddingLeft: isDesktop ? `${effectiveSidebarWidth}px` : undefined }}
         suppressHydrationWarning
       >
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="w-full max-w-full flex-1 min-h-0 flex flex-col p-3 sm:p-5 lg:p-6 overflow-x-hidden print:p-0 print:m-0 print:w-full"
-        >
+        <div className="w-full max-w-full flex-1 min-h-0 flex flex-col p-3 sm:p-5 lg:p-6 overflow-x-hidden print:p-0 print:m-0 print:w-full">
           {children}
-        </motion.div>
+        </div>
       </main>
       <div className="print:hidden">
         <LogoutConfirmModal />

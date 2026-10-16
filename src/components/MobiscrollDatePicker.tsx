@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@mobiscroll/react-lite";
 import { IoCalendarOutline, IoChevronBack, IoChevronForward, IoClose } from "react-icons/io5";
 
 interface MobiscrollDatePickerProps {
@@ -321,20 +320,8 @@ export default function MobiscrollDatePicker({
 
           {/* Action Footer */}
           <div className="flex items-center justify-between border-t gi-divider pt-2">
-            <Button
-              variant="outline"
-              onClick={handleSetToday}
-              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer active:scale-95"
-            >
-              Today
-            </Button>
-            <Button
-              variant="flat"
-              onClick={() => setIsOpen(false)}
-              className="text-xs font-semibold gi-text-secondary cursor-pointer active:scale-95"
-            >
-              Cancel
-            </Button>
+            <button type="button" onClick={handleSetToday} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer active:scale-95 px-2.5 py-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors">Today</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="text-xs font-semibold gi-text-secondary cursor-pointer active:scale-95 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">Cancel</button>
           </div>
         </div>,
         document.body
