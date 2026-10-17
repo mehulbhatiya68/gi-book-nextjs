@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,7 +15,7 @@ import {
   IoSwapVerticalOutline,
 } from "react-icons/io5";
 import { useAuth } from "@/context/AuthContext";
-import { partyApi } from "@/lib/api/party";
+import { partyApi, isPartyRecord } from "@/lib/api/party";
 import { useDebounce } from "@/hooks/useDebounce";
 import PermissionGuard from "@/components/PermissionGuard";
 import PaginationControls from "@/components/PaginationControls";
@@ -26,18 +26,40 @@ import { apiCache } from "@/lib/api/cache";
 import { useMinimumLoading } from "@/lib/hooks/useMinimumLoading";
 import SmoothTransition from "@/components/SmoothTransition";
 
+// Helper to safely extract strictly filtered party records from the dedicated party cache
+function getCachedPartiesList(): any[] | null {
+  if (typeof window === "undefined") return null;
+  const cached = apiCache.peek<any>("/parties", "GET");
+  if (!cached) return null;
+  const rawList = Array.isArray(cached?.body)
+    ? cached.body
+    : (cached?.body?.data || cached?.body?.parties || []);
+  if (!Array.isArray(rawList)) return null;
+  return rawList.filter(isPartyRecord);
+}
+
 export default function Parties() {
   const router = useRouter();
-  const { activeBusiness, hasPermission } = useAuth();
+  const { activeBusiness, hasPermission, isLoading: isAuthLoading } = useAuth();
+  const activeBizId = activeBusiness?.id;
 
+  // Initialize strictly with dedicated party cache; never fallback to unfiltered ledgers
   const [parties, setParties] = useState<any[]>(() => {
-    const cached = apiCache.peek<any>("/parties", "GET") || apiCache.peek<any>("/ledgers", "POST", { per_page: "all" });
-    const list = Array.isArray(cached?.body)
-      ? cached.body
-      : (cached?.body?.data || cached?.body?.parties || cached?.body?.ledgers || []);
-    return Array.isArray(list) ? list : [];
+    const cachedList = getCachedPartiesList();
+    return cachedList ?? [];
   });
-  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!parties.length, 0);
+
+  const hasCacheHit = typeof window !== "undefined" && getCachedPartiesList() !== null;
+  const { isLoading, startLoading, stopLoading } = useMinimumLoading(!hasCacheHit, 0);
+
+  // Synchronize state when active business switches during session
+  const prevBizIdRef = useRef(activeBizId);
+  if (prevBizIdRef.current !== activeBizId) {
+    prevBizIdRef.current = activeBizId;
+    const nextCached = getCachedPartiesList();
+    setParties(nextCached ?? []);
+  }
+
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -54,24 +76,45 @@ export default function Parties() {
   };
 
   useEffect(() => {
-    if (activeBusiness?.id) {
-      if (!parties.length) {
-        startLoading();
+    let isCancelled = false;
+
+    // Wait until active business is resolved
+    if (!activeBizId) {
+      if (!isAuthLoading) {
+        stopLoading();
       }
-      partyApi.getParties(activeBusiness.id)
-        .then((res: any) => {
-          const list = Array.isArray(res?.body)
-            ? res.body
-            : (res?.body?.data || res?.body?.parties || res?.body?.ledgers || []);
-          setParties(Array.isArray(list) ? list : []);
-        })
-        .catch(console.error)
-        .finally(() => stopLoading());
-    } else {
-      setParties([]);
-      stopLoading();
+      return;
     }
-  }, [activeBusiness?.id]);
+
+    // Check if we need to show the loader (only when cache is absent)
+    const cachedList = getCachedPartiesList();
+    if (cachedList === null) {
+      startLoading();
+    }
+
+    partyApi.getParties(activeBizId)
+      .then((res: any) => {
+        if (isCancelled) return;
+        const rawList = Array.isArray(res?.body)
+          ? res.body
+          : (res?.body?.data || res?.body?.parties || []);
+        const list = (Array.isArray(rawList) ? rawList : []).filter(isPartyRecord);
+        setParties(list);
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.error("Failed to load parties:", err);
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          stopLoading();
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeBizId, isAuthLoading, startLoading, stopLoading]);
 
   const getPartyBalanceLabel = (party: any, balance: number) => {
     if (balance === 0) return "Settled";
@@ -96,6 +139,9 @@ export default function Parties() {
     const query = debouncedSearch.toLowerCase().trim();
 
     return parties.filter((party: any) => {
+      // Defense-in-depth: Ensure non-party records (bank, cash, expense) are never rendered
+      if (!isPartyRecord(party)) return false;
+
       const name = party.name || party.partyName || "";
       const phone = party.contact_number || party.phone || party.mobile || "";
       const gst = party.gst_number || party.gstNumber || party.gstin || "";
